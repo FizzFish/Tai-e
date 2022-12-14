@@ -33,21 +33,25 @@ import pascal.taie.analysis.pta.core.cs.element.CSMethod;
 import pascal.taie.analysis.pta.core.cs.element.CSObj;
 import pascal.taie.analysis.pta.core.cs.element.CSVar;
 import pascal.taie.analysis.pta.core.heap.Obj;
+import pascal.taie.analysis.pta.core.solver.PointerFlowEdge;
 import pascal.taie.analysis.pta.core.solver.Solver;
+import pascal.taie.analysis.pta.core.solver.TypeFilter;
 import pascal.taie.analysis.pta.plugin.Plugin;
 import pascal.taie.analysis.pta.pts.PointsToSet;
+import pascal.taie.ir.IRPrinter;
 import pascal.taie.ir.exp.InvokeExp;
 import pascal.taie.ir.exp.InvokeInstanceExp;
+import pascal.taie.ir.exp.InvokeStatic;
 import pascal.taie.ir.exp.Var;
 import pascal.taie.ir.stmt.Invoke;
 import pascal.taie.language.classes.JMethod;
+import pascal.taie.language.type.ClassType;
 import pascal.taie.language.type.Type;
 import pascal.taie.util.collection.Maps;
 import pascal.taie.util.collection.MultiMap;
 import pascal.taie.util.collection.Pair;
 
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.*;
 
 public class TaintAnalysis implements Plugin {
 
@@ -81,7 +85,7 @@ public class TaintAnalysis implements Plugin {
     private TaintManager manager;
 
     private TaintConfig config;
-
+    private boolean entryTaint = true;
     @Override
     public void setSolver(Solver solver) {
         this.solver = solver;
@@ -99,6 +103,20 @@ public class TaintAnalysis implements Plugin {
                 transfers.put(t.method(), t));
     }
 
+    public void onNewCSMethod(CSMethod csEntry) {
+        if (!entryTaint)
+            return;
+        entryTaint = false;
+        JMethod entry = csEntry.getMethod();
+        List<Var> params = entry.getIR().getParams();
+        for (int i = 0; i < 1; i++) {
+            Var param = params.get(i);
+            InvokeExp invokeExp = new InvokeStatic(entry.getRef(), params);
+            Invoke invoke = new Invoke(entry, invokeExp, null);
+            Obj taint = manager.makeTaint(invoke , ((ClassType) param.getType()).taintType());
+            solver.addVarPointsTo(csEntry.getContext(), param, emptyContext, taint);
+        }
+    }
     @Override
     public void onNewCallEdge(Edge<CSCallSite, CSMethod> edge) {
         Invoke callSite = edge.getCallSite().getCallSite();
@@ -112,6 +130,16 @@ public class TaintAnalysis implements Plugin {
                         emptyContext, taint);
             });
         }
+        Context ctx = edge.getCallSite().getContext();
+//        String declareClassName = callee.getDeclaringClass().getName();
+//        if (lhs != null && (declareClassName.startsWith("java.lang.Class") || declareClassName.startsWith("java.util"))) {
+//            callSite.getInvokeExp().getArgs().forEach(arg -> {
+//                PointsToSet newTaints = solver.makePointsToSet();
+//                CSVar CSArg = csManager.getCSVar(ctx, arg);
+//                CSVar CSLhs = csManager.getCSVar(ctx, lhs);
+//                solver.addPFGEdge(CSArg, CSLhs, PointerFlowEdge.Kind.TAINT);
+//            });
+//        }
         // process taint transfer
         transfers.get(callee).forEach(transfer -> {
             Var from = getVar(callSite, transfer.from());
@@ -121,9 +149,11 @@ public class TaintAnalysis implements Plugin {
             if (to != null) {
                 Type type = transfer.type();
                 varTransfers.put(from, new Pair<>(to, type));
-                Context ctx = edge.getCallSite().getContext();
+//                Context ctx = edge.getCallSite().getContext();
                 CSVar csFrom = csManager.getCSVar(ctx, from);
-                transferTaint(solver.getPointsToSetOf(csFrom), ctx, to, type);
+                PointsToSet pts = solver.getPointsToSetOf(csFrom);
+                if (!pts.isEmpty())
+                    transferTaint(pts, ctx, to, type);
             }
         });
     }
@@ -185,6 +215,28 @@ public class TaintAnalysis implements Plugin {
                                 .map(sourceCall -> new TaintFlow(sourceCall, sinkCall, i))
                                 .forEach(taintFlows::add);
                     });
+        });
+        Map<JMethod, List> taints = new HashMap();
+        result.getVars().forEach(var -> {
+            if (var.getMethod().toString().startsWith("<ognl.") && //!p.matcher(var.getName()).matches() &&
+                    result.getPointsToSet(var).stream().filter(manager::isTaint).count() > 0){
+                        JMethod method = var.getMethod();
+                String name = var.getName();
+                if (taints.containsKey(method)) {
+                    taints.get(method).add(name);
+                } else {
+                    List<String> names = new ArrayList<>();
+                    names.add(name);
+                    taints.put(method, names);
+                }
+            }
+        });
+        taints.forEach((method, names) -> {
+            System.out.println("----------------------------");
+            System.out.println(method.toString());
+            method.getIR().forEach(s -> System.out.println(IRPrinter.toString(s)));
+            System.out.println(names.toString());
+            System.out.println("----------------------------");
         });
         return taintFlows;
     }

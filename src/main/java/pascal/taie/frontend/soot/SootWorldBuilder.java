@@ -226,6 +226,10 @@ public class SootWorldBuilder extends AbstractWorldBuilder {
             }
         } else {
             logger.warn("Warning: main class was not given!");
+            if (scene.containsMethod("<ognl.Ognl: java.lang.Object getValue(java.lang.Object,java.util.Map,java.lang.Object)>")){
+                logger.warn("Find getValue method");
+                world.setMainMethod(converter.convertMethod(scene.getMethod("<ognl.Ognl: java.lang.Object getValue(java.lang.Object,java.util.Map,java.lang.Object)>")));
+            }
         }
         // set implicit entries
         world.setImplicitEntries(implicitEntries.stream()

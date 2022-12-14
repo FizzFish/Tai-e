@@ -30,6 +30,7 @@ import pascal.taie.ir.stmt.Invoke;
 import pascal.taie.language.classes.ClassNames;
 import pascal.taie.language.classes.JField;
 import pascal.taie.language.classes.JMethod;
+import pascal.taie.language.type.ClassType;
 import pascal.taie.language.type.Type;
 import pascal.taie.language.type.TypeSystem;
 import pascal.taie.util.Indexer;
@@ -245,14 +246,23 @@ public class MapBasedCSManager implements CSManager {
 
         CSObj getCSObj(Context heapContext, Obj obj) {
             return objMap.computeIfAbsent(obj, heapContext, (o, c) -> {
-                int index = getCSObjIndex(o);
+//                try {
+                    int index = getCSObjIndex(o);
+
                 CSObj csObj = new CSObj(o, c, index);
                 storeCSObj(csObj, index);
+
                 return csObj;
+//                } catch (Exception e){
+//                    System.out.println();
+//                }
+//                return null;
             });
         }
 
         private int getCSObjIndex(Obj obj) {
+            if (obj.getType() instanceof ClassType && ((ClassType) obj.getType()).getJClass() == null)
+                return counter++;
             if (typeSystem.isSubtype(throwable, obj.getType()) &&
                     throwableCounter < THROWABLE_BUDGET) {
                 return throwableCounter++;

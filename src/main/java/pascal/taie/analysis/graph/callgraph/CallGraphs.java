@@ -35,7 +35,10 @@ import pascal.taie.ir.exp.InvokeStatic;
 import pascal.taie.ir.exp.InvokeVirtual;
 import pascal.taie.ir.proginfo.MethodRef;
 import pascal.taie.ir.stmt.Invoke;
+import pascal.taie.language.classes.ClassHierarchy;
+import pascal.taie.language.classes.JClass;
 import pascal.taie.language.classes.JMethod;
+import pascal.taie.language.classes.Subsignature;
 import pascal.taie.language.type.Type;
 import pascal.taie.util.AnalysisException;
 import pascal.taie.util.Indexer;
@@ -48,9 +51,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.PrintStream;
-import java.util.Comparator;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -81,6 +82,26 @@ public final class CallGraphs {
 
     public static CallKind getCallKind(Invoke invoke) {
         return getCallKind(invoke.getInvokeExp());
+    }
+
+    public static Set<JMethod> resolve(Invoke callSite) {
+        MethodRef methodRef = callSite.getMethodRef();
+        JClass jclass = methodRef.getDeclaringClass();
+        ClassHierarchy hierarchy = World.get().getClassHierarchy();
+        Set<JMethod> methods = new HashSet();
+        Set<JClass> subClasses = new HashSet<>();
+        subClasses.add(jclass);
+        if (callSite.isInterface())
+            hierarchy.getDirectImplementorsOf(jclass).forEach(subClasses::add);
+        else if (callSite.isVirtual())
+            hierarchy.getDirectSubclassesOf(jclass).forEach(subClasses::add);
+        Subsignature subsignature = methodRef.getSubsignature();
+        for (JClass subclass : subClasses) {
+            JMethod method = subclass.getDeclaredMethod(subsignature);
+            if (method != null && !method.isAbstract())
+                methods.add(method);
+        }
+        return methods;
     }
 
     @Nullable

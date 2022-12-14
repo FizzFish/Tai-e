@@ -83,11 +83,7 @@ import pascal.taie.language.type.TypeSystem;
 import pascal.taie.util.collection.Maps;
 import pascal.taie.util.collection.Sets;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 
 import static pascal.taie.language.classes.Signatures.FINALIZE;
 import static pascal.taie.language.classes.Signatures.FINALIZER_REGISTER;
@@ -312,6 +308,12 @@ public class DefaultSolver implements Solver {
             if (isConcerned(toVar)) {
                 CSVar to = csManager.getCSVar(context, toVar);
                 pts.forEach(baseObj -> {
+                    Obj obj = baseObj.getObject();
+                    if (obj instanceof MockObj && ((MockObj) obj).getDescription().equals("TaintObj")) {
+                        PointsToSet taintPTS = makePointsToSet();
+                        taintPTS.addObject(baseObj);
+                        addPointsTo(to, taintPTS);
+                    }
                     InstanceField instField = csManager.getInstanceField(
                             baseObj, field);
                     addPFGEdge(instField, to, PointerFlowEdge.Kind.INSTANCE_LOAD);
@@ -334,6 +336,7 @@ public class DefaultSolver implements Solver {
             if (isConcerned(rvalue)) {
                 CSVar from = csManager.getCSVar(context, rvalue);
                 pts.forEach(array -> {
+//                    if (array.getObject().getType() instanceof  ArrayType) {
                     ArrayIndex arrayIndex = csManager.getArrayIndex(array);
                     // we need type guard for array stores as Java arrays
                     // are covariant
@@ -376,23 +379,34 @@ public class DefaultSolver implements Solver {
         Var var = recv.getVar();
         for (Invoke callSite : var.getInvokes()) {
             pts.forEach(recvObj -> {
-                // resolve callee
-                JMethod callee = CallGraphs.resolveCallee(
-                        recvObj.getObject().getType(), callSite);
-                if (callee != null) {
-                    // select context
-                    CSCallSite csCallSite = csManager.getCSCallSite(context, callSite);
-                    Context calleeContext = contextSelector.selectContext(
-                            csCallSite, recvObj, callee);
-                    // build call edge
-                    CSMethod csCallee = csManager.getCSMethod(calleeContext, callee);
-                    addCallEdge(new Edge<>(CallGraphs.getCallKind(callSite),
-                            csCallSite, csCallee));
-                    // pass receiver object to *this* variable
-                    if (!isIgnored(callee)) {
-                        addVarPointsTo(calleeContext, callee.getIR().getThis(),
-                                recvObj);
-                    }
+                Obj obj = recvObj.getObject();
+                Set<JMethod> methods = new HashSet<>();
+                if (obj instanceof MockObj && ((MockObj) obj).getDescription().equals("TaintObj")) {
+                    methods = CallGraphs.resolve(callSite);
+                } else {
+                    // resolve callee
+                    JMethod callee = CallGraphs.resolveCallee(
+                            recvObj.getObject().getType(), callSite);
+                    if (callee != null)
+                        methods.add(callee);
+                }
+                // jdk function may transfer taint
+                if (!methods.isEmpty()) {
+                    methods.forEach(callee -> {
+                        // select context
+                        CSCallSite csCallSite = csManager.getCSCallSite(context, callSite);
+                        Context calleeContext = contextSelector.selectContext(
+                                csCallSite, recvObj, callee);
+                        // build call edge
+                        CSMethod csCallee = csManager.getCSMethod(calleeContext, callee);
+                        addCallEdge(new Edge<>(CallGraphs.getCallKind(callSite),
+                                csCallSite, csCallee));
+                        // pass receiver object to *this* variable
+                        if (!isIgnored(callee)) {
+                            addVarPointsTo(calleeContext, callee.getIR().getThis(),
+                                    recvObj);
+                        }
+                    });
                 } else {
                     plugin.onUnresolvedCall(recvObj, context, callSite);
                 }

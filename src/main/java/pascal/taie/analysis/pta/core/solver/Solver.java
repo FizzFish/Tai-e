@@ -47,6 +47,8 @@ import pascal.taie.language.type.TypeSystem;
 
 import java.util.Collection;
 
+import static pascal.taie.analysis.pta.core.solver.PointerFlowEdge.Kind.TAINT;
+
 public interface Solver {
 
     AnalysisOptions getOptions();
@@ -107,7 +109,10 @@ public interface Solver {
      * Adds an edge "source -> target" to the PFG.
      */
     default void addPFGEdge(Pointer source, Pointer target, PointerFlowEdge.Kind kind) {
-        addPFGEdge(source, target, kind, Identity.get());
+        if (kind == TAINT)
+            addPFGEdge(source, target, kind, new TaintTransfer(this));
+        else
+            addPFGEdge(source, target, kind, Identity.get());
     }
 
     /**

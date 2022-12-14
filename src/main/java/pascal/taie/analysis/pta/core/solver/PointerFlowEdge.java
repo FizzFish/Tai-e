@@ -85,5 +85,7 @@ public class PointerFlowEdge extends AbstractEdge<Pointer> {
 
         PARAMETER_PASSING,
         RETURN,
+
+        TAINT,
     }
 }
