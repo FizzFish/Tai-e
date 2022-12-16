@@ -109,10 +109,7 @@ public interface Solver {
      * Adds an edge "source -> target" to the PFG.
      */
     default void addPFGEdge(Pointer source, Pointer target, PointerFlowEdge.Kind kind) {
-        if (kind == TAINT)
-            addPFGEdge(source, target, kind, new TaintTransfer(this));
-        else
-            addPFGEdge(source, target, kind, Identity.get());
+        addPFGEdge(source, target, kind, Identity.get());
     }
 
     /**
@@ -122,7 +119,10 @@ public interface Solver {
      * cast/arrystore/lambda/reflection
      */
     default void addPFGEdge(Pointer source, Pointer target, PointerFlowEdge.Kind kind, Type type) {
-        addPFGEdge(source, target, kind, new TypeFilter(type, this));
+        if (kind == TAINT)
+            addPFGEdge(source, target, kind, new TaintTransfer(type, this));
+        else
+            addPFGEdge(source, target, kind, new TypeFilter(type, this));
     }
 
     /**

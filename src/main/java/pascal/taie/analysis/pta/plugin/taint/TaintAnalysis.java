@@ -43,6 +43,7 @@ import pascal.taie.language.type.Type;
 import pascal.taie.util.collection.Maps;
 import pascal.taie.util.collection.MultiMap;
 import pascal.taie.util.collection.Pair;
+import pascal.taie.util.collection.ThreePair;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -68,7 +69,7 @@ public class TaintAnalysis implements Plugin {
      * The taint objects pointed to by the "key" variable are supposed
      * to be transferred to "value" variable with specified type.
      */
-    private final MultiMap<Var, Pair<Var, Type>> varTransfers = Maps.newMultiMap();
+    private MultiMap<Var, ThreePair<Var, Type, String>> varTransfers = Maps.newMultiMap();
     private MultiMap<String, Var> sinkInfo = Maps.newMultiMap();
 
     private Solver solver;
@@ -121,7 +122,7 @@ public class TaintAnalysis implements Plugin {
         String methodRef = callSite.getMethodRef().toString();
         JMethod callee = edge.getCallee().getMethod();
         // generate taint value from source call
-        Var lhs = callSite.getLValue();
+//        Var lhs = callSite.getLValue();
 //        if (lhs != null && sources.containsKey(callee)) {
 //            sources.get(callee).forEach(type -> {
 //                Obj taint = manager.makeTaint(callSite, type);
@@ -136,27 +137,44 @@ public class TaintAnalysis implements Plugin {
                 sinkInfo.put(methodRef, var);
             }
         });
-//         process taint transfer
+        // process taint transfer
         transfers.get(methodRef).forEach(transfer -> {
             Var from = getVar(callSite, transfer.from());
             Var to = getVar(callSite, transfer.to());
+            String stmt = callSite.toString();
             // when transfer to result variable, and the call site
             // does not have result variable, then "to" is null.
             if (to != null) {
                 Type type = transfer.type();
-//                varTransfers.put(from, new Pair<>(to, type));
+                // propagate when csFrom contains taintObj
+                //  solver.addPFGEdge(csFrom, csTo, PointerFlowEdge.Kind.TAINT, type);
+//                varTransfers.put(from, new ThreePair<>(to, type, stmt));
+
                 Context ctx = edge.getCallSite().getContext();
                 CSVar csFrom = csManager.getCSVar(ctx, from);
-                CSVar csTo = csManager.getCSVar(ctx, to);
-                if (solver.getPointsToSetOf(csFrom).containTaint()) {
-                    TaintObj taint = manager.makeTaint(callSite, to.getType(), "jdk");
-                    solver.addVarPointsTo(ctx, to, emptyContext, taint);
-                } else {
-                    // propagate when csFrom contains taintObj
-                    solver.addPFGEdge(csFrom, csTo, PointerFlowEdge.Kind.TAINT);
-                }
+                PointsToSet pts = solver.getPointsToSetOf(csFrom);
+                CSObj taint = pts.getTaint();
+                if (taint != null)
+                    solver.addVarPointsTo(ctx, to, emptyContext, manager.makeTaint(taint.getObject(), type, stmt));
+                else
+                    varTransfers.put(from, new ThreePair<>(to, type, stmt));
+//                    solver.addPFGEdge(csFrom, csManager.getCSVar(ctx, to), PointerFlowEdge.Kind.TAINT, type);
             }
         });
+    }
+
+    @Override
+    public void onNewPointsToSet(CSVar csVar, PointsToSet pts) {
+        CSObj taint = pts.getTaint();
+        if (taint == null)
+            return;
+        Var var = csVar.getVar();
+        Context ctx = csVar.getContext();
+        MultiMap<Var, ThreePair<Var, Type, String>> varTrans = Maps.newMultiMap();
+        varTransfers.get(var).forEach(pair ->
+                solver.addVarPointsTo(ctx, pair.first(), emptyContext, manager.makeTaint(taint.getObject(), pair.second(), pair.thrid())));
+        // only transfer one time for var
+        varTransfers.removeAll(var);
     }
 
     /**
@@ -181,10 +199,11 @@ public class TaintAnalysis implements Plugin {
         PointerAnalysisResult result = solver.getResult();
         Set<TaintFlow> taintFlows = new TreeSet<>();
         sinkInfo.forEach((methodRef, var) -> {
-            AtomicBoolean flag = new AtomicBoolean(false);
             result.getPointsToSet(var).forEach(obj -> {
                 if (obj instanceof TaintObj) {
-                    flag.set(true);
+                    System.out.println("----------------------------");
+                    System.out.println(obj.toString());
+                    System.out.println("----------------------------");
                 }
             });
             System.out.printf("Find sink: %s with %s in %s\n", methodRef, var.toString(), var.getMethod());

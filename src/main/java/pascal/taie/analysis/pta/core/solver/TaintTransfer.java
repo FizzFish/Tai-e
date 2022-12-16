@@ -34,8 +34,9 @@ import java.util.function.Supplier;
 public class TaintTransfer implements Transfer {
 
     private final Supplier<PointsToSet> ptsFactory;
-
-    public TaintTransfer(Solver solver) {
+    private final Type type;
+    public TaintTransfer(Type type, Solver solver) {
+        this.type = type;
         this.ptsFactory = solver::makePointsToSet;
     }
 

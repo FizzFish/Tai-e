@@ -165,8 +165,8 @@ public abstract class AbstractHeapModel implements HeapModel {
         return mockObjs.computeIfAbsent(mockObj, this::add);
     }
 
-    public TaintObj getTaintObj(Stmt alloc, Type type, String des) {
-        TaintObj taintObj = new TaintObj(alloc, type, des);
+    public TaintObj getTaintObj(Obj parent, Type type, String stmt) {
+        TaintObj taintObj = new TaintObj(parent, type, stmt);
         add(taintObj);
         return taintObj;
     }

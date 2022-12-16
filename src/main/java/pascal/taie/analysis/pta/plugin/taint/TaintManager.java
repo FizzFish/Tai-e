@@ -57,8 +57,8 @@ class TaintManager {
         return heapModel.getMockObj(TAINT_DESC, source, type);
     }
 
-    TaintObj makeTaint(Stmt stmt, Type type, String des) {
-        return heapModel.getTaintObj(stmt, type, des);
+    TaintObj makeTaint(Obj parent, Type type, String stmt) {
+        return heapModel.getTaintObj(parent, type, stmt);
     }
 
     /**

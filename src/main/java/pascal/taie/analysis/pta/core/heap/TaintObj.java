@@ -7,15 +7,15 @@ import pascal.taie.language.type.Type;
 import java.util.Optional;
 
 public class TaintObj extends Obj{
-    private Stmt alloc;
+    private Obj parent;
     private final Type type;
-    private String des;
+    private String stmt;
     private JMethod container;
 
-    public TaintObj(Stmt alloc, Type type, String des) {
+    public TaintObj(Obj parent, Type type, String stmt) {
         this.type = type;
-        this.alloc = alloc;
-        this.des = des;
+        this.parent = parent;
+        this.stmt = stmt;
         this.container = null;
     }
 
@@ -24,7 +24,7 @@ public class TaintObj extends Obj{
     }
 
     public Object getAllocation() {
-        return alloc;
+        return stmt;
     }
 
     @Override
@@ -38,7 +38,12 @@ public class TaintObj extends Obj{
     }
 
     public String toString() {
-        String out = String.format("%s: %s, %s\n", des, type.toString(), alloc);
+        TaintObj cur = this;
+        String out = "";
+        do {
+            out += String.format("%s: %s\n", cur.type.toString(), cur.stmt);
+            cur = (TaintObj) cur.parent;
+        } while (cur != null);
         return out;
     }
 }
