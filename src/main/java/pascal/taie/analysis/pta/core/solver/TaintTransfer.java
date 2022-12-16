@@ -25,6 +25,7 @@ package pascal.taie.analysis.pta.core.solver;
 import pascal.taie.analysis.pta.core.cs.element.CSObj;
 import pascal.taie.analysis.pta.core.heap.MockObj;
 import pascal.taie.analysis.pta.core.heap.Obj;
+import pascal.taie.analysis.pta.core.heap.TaintObj;
 import pascal.taie.analysis.pta.pts.PointsToSet;
 import pascal.taie.language.type.Type;
 
@@ -42,8 +43,7 @@ public class TaintTransfer implements Transfer {
     public PointsToSet apply(PointerFlowEdge edge, PointsToSet input) {
         PointsToSet result = ptsFactory.get();
         for (CSObj csobj : input) {
-            Obj obj = csobj.getObject();
-            if (obj instanceof MockObj && ((MockObj) obj).getDescription().equals("TaintObj"))
+            if (csobj.getObject() instanceof TaintObj)
                 result.addObject(csobj);
         }
         return input;

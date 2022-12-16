@@ -25,6 +25,7 @@ package pascal.taie.analysis.pta.core.solver;
 import pascal.taie.analysis.pta.core.cs.element.CSObj;
 import pascal.taie.analysis.pta.core.heap.MockObj;
 import pascal.taie.analysis.pta.core.heap.Obj;
+import pascal.taie.analysis.pta.core.heap.TaintObj;
 import pascal.taie.analysis.pta.pts.PointsToSet;
 import pascal.taie.language.type.Type;
 import pascal.taie.language.type.TypeSystem;
@@ -60,9 +61,7 @@ public class TypeFilter implements Transfer {
 //                .forEach(result::addObject);
         for (CSObj csobj : input) {
             Obj obj = csobj.getObject();
-            if (typeSystem.isSubtype(type, obj.getType())) // || obj.getObject() instanceof MockObj)
-                result.addObject(csobj);
-            if (obj instanceof MockObj && ((MockObj) obj).getDescription().equals("TaintObj"))
+            if (typeSystem.isSubtype(type, obj.getType()) || obj instanceof TaintObj)
                 result.addObject(csobj);
         }
         return result;

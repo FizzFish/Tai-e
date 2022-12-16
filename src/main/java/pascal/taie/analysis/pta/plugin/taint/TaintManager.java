@@ -22,10 +22,14 @@
 
 package pascal.taie.analysis.pta.plugin.taint;
 
+import pascal.taie.analysis.pta.core.cs.element.Pointer;
 import pascal.taie.analysis.pta.core.heap.HeapModel;
 import pascal.taie.analysis.pta.core.heap.MockObj;
 import pascal.taie.analysis.pta.core.heap.Obj;
+import pascal.taie.analysis.pta.core.heap.TaintObj;
 import pascal.taie.ir.stmt.Invoke;
+import pascal.taie.ir.stmt.Stmt;
+import pascal.taie.language.classes.JMethod;
 import pascal.taie.language.type.Type;
 import pascal.taie.util.AnalysisException;
 
@@ -53,12 +57,17 @@ class TaintManager {
         return heapModel.getMockObj(TAINT_DESC, source, type);
     }
 
+    TaintObj makeTaint(Stmt stmt, Type type, String des) {
+        return heapModel.getTaintObj(stmt, type, des);
+    }
+
     /**
      * @return true if given obj represents a taint object, otherwise false.
      */
     boolean isTaint(Obj obj) {
-        return obj instanceof MockObj &&
-                ((MockObj) obj).getDescription().equals(TAINT_DESC);
+        return obj instanceof TaintObj;
+//        return obj instanceof MockObj &&
+//                ((MockObj) obj).getDescription().equals(TAINT_DESC);
     }
 
     /**

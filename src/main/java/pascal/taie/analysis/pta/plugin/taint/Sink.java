@@ -28,10 +28,10 @@ import pascal.taie.language.classes.JMethod;
  * Represents a sink that consists of a sink method and
  * a sensitive index.
  */
-record Sink(JMethod method, int index) {
+record Sink(String methodRef, int index) {
 
     @Override
     public String toString() {
-        return method + "/" + index;
+        return methodRef + "/" + index;
     }
 }

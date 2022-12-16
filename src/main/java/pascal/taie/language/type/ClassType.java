@@ -34,26 +34,14 @@ public class ClassType implements ReferenceType {
 
     private JClass jclass;
 
-    private boolean taint;
-
     public ClassType(JClassLoader loader, String name) {
         this.loader = loader;
         this.name = name;
-        taint = false;
     }
 
     @Override
     public String getName() {
         return name;
-    }
-
-    public ClassType taintType() {
-        taint = true;
-        return this;
-    }
-
-    public boolean isTaint() {
-        return taint;
     }
 
     public JClass getJClass() {

@@ -29,6 +29,7 @@ public enum CallKind {
     SPECIAL,
     STATIC,
     DYNAMIC,
+    TAINT,
     /**
      * Non-regular calls, such calls are typically handled
      * by pointer analysis plugins.

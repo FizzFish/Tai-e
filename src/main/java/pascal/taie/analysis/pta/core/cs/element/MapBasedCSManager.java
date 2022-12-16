@@ -25,6 +25,7 @@ package pascal.taie.analysis.pta.core.cs.element;
 import pascal.taie.World;
 import pascal.taie.analysis.pta.core.cs.context.Context;
 import pascal.taie.analysis.pta.core.heap.Obj;
+import pascal.taie.analysis.pta.core.heap.TaintObj;
 import pascal.taie.ir.exp.Var;
 import pascal.taie.ir.stmt.Invoke;
 import pascal.taie.language.classes.ClassNames;
@@ -261,7 +262,7 @@ public class MapBasedCSManager implements CSManager {
         }
 
         private int getCSObjIndex(Obj obj) {
-            if (obj.getType() instanceof ClassType && ((ClassType) obj.getType()).getJClass() == null)
+            if (obj instanceof TaintObj)
                 return counter++;
             if (typeSystem.isSubtype(throwable, obj.getType()) &&
                     throwableCounter < THROWABLE_BUDGET) {

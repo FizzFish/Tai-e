@@ -207,12 +207,11 @@ class TaintConfig {
                 Set<Sink> sinks = Sets.newSet(arrayNode.size());
                 for (JsonNode elem : arrayNode) {
                     String methodSig = elem.get("method").asText();
-                    JMethod method = hierarchy.getMethod(methodSig);
-                    if (method != null) {
+                    if (methodSig != null) {
                         // if the method (given in config file) is absent in
                         // the class hierarchy, just ignore it.
                         int index = elem.get("index").asInt();
-                        sinks.add(new Sink(method, index));
+                        sinks.add(new Sink(methodSig, index));
                     } else {
                         logger.warn("Cannot find sink method '{}'", methodSig);
                     }
@@ -235,18 +234,18 @@ class TaintConfig {
             if (node instanceof ArrayNode arrayNode) {
                 Set<TaintTransfer> transfers = Sets.newSet(arrayNode.size());
                 for (JsonNode elem : arrayNode) {
-                    String methodSig = elem.get("method").asText();
-                    JMethod method = hierarchy.getMethod(methodSig);
-                    if (method != null) {
+                    String methodRef = elem.get("method").asText();
+//                    JMethod method = hierarchy.getMethod(methodSig);
+                    if (methodRef != null) {
                         // if the method (given in config file) is absent in
                         // the class hierarchy, just ignore it.
                         int from = TaintTransfer.toInt(elem.get("from").asText());
                         int to = TaintTransfer.toInt(elem.get("to").asText());
                         Type type = typeSystem.getType(
                                 elem.get("type").asText());
-                        transfers.add(new TaintTransfer(method, from, to, type));
+                        transfers.add(new TaintTransfer(methodRef, from, to, type));
                     } else {
-                        logger.warn("Cannot find taint-transfer method '{}'", methodSig);
+                        logger.warn("Cannot find taint-transfer method '{}'", methodRef);
                     }
                 }
                 return Collections.unmodifiableSet(transfers);

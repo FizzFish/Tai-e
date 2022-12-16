@@ -198,11 +198,20 @@ public class Var implements LValue, RValue, Indexable {
         relevantStmts.addInvoke(invoke);
     }
 
+    public void addArgInvoke(Invoke invoke) {
+        ensureRelevantStmts();
+        relevantStmts.addArgInvoke(invoke);
+    }
+
     /**
      * @return {@link Invoke}s whose base variable is this Var.
      */
     public List<Invoke> getInvokes() {
         return relevantStmts.getInvokes();
+    }
+
+    public List<Invoke> getArgInvokes() {
+        return relevantStmts.getArgInvokes();
     }
 
     /**
@@ -241,6 +250,7 @@ public class Var implements LValue, RValue, Indexable {
         private List<LoadArray> loadArrays = List.of();
         private List<StoreArray> storeArrays = List.of();
         private List<Invoke> invokes = List.of();
+        private List<Invoke> argInvokes = List.of();
 
         private List<LoadField> getLoadFields() {
             return unmodifiable(loadFields);
@@ -289,12 +299,20 @@ public class Var implements LValue, RValue, Indexable {
         private List<Invoke> getInvokes() {
             return unmodifiable(invokes);
         }
-
+        private List<Invoke> getArgInvokes() {
+            return unmodifiable(argInvokes);
+        }
         private void addInvoke(Invoke invoke) {
             if (invokes.isEmpty()) {
                 invokes = new ArrayList<>(DEFAULT_CAPACITY);
             }
             invokes.add(invoke);
+        }
+        private void addArgInvoke(Invoke invoke) {
+            if (argInvokes.isEmpty()) {
+                argInvokes = new ArrayList<>(DEFAULT_CAPACITY);
+            }
+            argInvokes.add(invoke);
         }
 
         private static <T> List<T> unmodifiable(List<T> list) {

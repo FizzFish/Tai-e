@@ -22,8 +22,10 @@
 
 package pascal.taie.analysis.pta.core.heap;
 
+import pascal.taie.analysis.pta.core.cs.element.Pointer;
 import pascal.taie.ir.exp.ReferenceLiteral;
 import pascal.taie.ir.stmt.New;
+import pascal.taie.ir.stmt.Stmt;
 import pascal.taie.language.classes.JMethod;
 import pascal.taie.language.type.Type;
 import pascal.taie.util.Indexer;
@@ -52,6 +54,7 @@ public interface HeapModel extends Indexer<Obj> {
      * @return the mock object for given arguments.
      */
     Obj getMockObj(String desc, Object alloc, Type type, JMethod container);
+    TaintObj getTaintObj(Stmt alloc, Type type, String des);
 
     /**
      * @return the mock object for given arguments.

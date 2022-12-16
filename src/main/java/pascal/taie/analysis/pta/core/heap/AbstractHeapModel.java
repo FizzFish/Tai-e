@@ -23,9 +23,11 @@
 package pascal.taie.analysis.pta.core.heap;
 
 import pascal.taie.World;
+import pascal.taie.analysis.pta.core.cs.element.Pointer;
 import pascal.taie.config.AnalysisOptions;
 import pascal.taie.ir.exp.ReferenceLiteral;
 import pascal.taie.ir.stmt.New;
+import pascal.taie.ir.stmt.Stmt;
 import pascal.taie.language.classes.JMethod;
 import pascal.taie.language.type.ClassType;
 import pascal.taie.language.type.Type;
@@ -161,6 +163,12 @@ public abstract class AbstractHeapModel implements HeapModel {
     public Obj getMockObj(String desc, Object alloc, Type type, JMethod container) {
         MockObj mockObj = new MockObj(desc, alloc, type, container);
         return mockObjs.computeIfAbsent(mockObj, this::add);
+    }
+
+    public TaintObj getTaintObj(Stmt alloc, Type type, String des) {
+        TaintObj taintObj = new TaintObj(alloc, type, des);
+        add(taintObj);
+        return taintObj;
     }
 
     /**

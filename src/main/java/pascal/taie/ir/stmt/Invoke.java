@@ -70,6 +70,9 @@ public class Invoke extends DefinitionStmt<Var, InvokeExp>
             Var base = ((InvokeInstanceExp) invokeExp).getBase();
             base.addInvoke(this);
         }
+        invokeExp.getArgs().forEach(arg -> {
+            arg.addArgInvoke(this);
+        });
         this.container = method;
     }
 
@@ -129,6 +132,9 @@ public class Invoke extends DefinitionStmt<Var, InvokeExp>
         return invokeExp instanceof InvokeDynamic;
     }
 
+    public boolean isJDK() {
+        return getMethodRef().getDeclaringClass().getName().startsWith("java");
+    }
     public JMethod getContainer() {
         return container;
     }

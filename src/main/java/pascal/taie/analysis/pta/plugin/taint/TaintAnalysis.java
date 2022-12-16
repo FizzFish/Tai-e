@@ -27,31 +27,25 @@ import org.apache.logging.log4j.Logger;
 import pascal.taie.analysis.graph.callgraph.Edge;
 import pascal.taie.analysis.pta.PointerAnalysisResult;
 import pascal.taie.analysis.pta.core.cs.context.Context;
-import pascal.taie.analysis.pta.core.cs.element.CSCallSite;
-import pascal.taie.analysis.pta.core.cs.element.CSManager;
-import pascal.taie.analysis.pta.core.cs.element.CSMethod;
-import pascal.taie.analysis.pta.core.cs.element.CSObj;
-import pascal.taie.analysis.pta.core.cs.element.CSVar;
+import pascal.taie.analysis.pta.core.cs.element.*;
 import pascal.taie.analysis.pta.core.heap.Obj;
+import pascal.taie.analysis.pta.core.heap.TaintObj;
 import pascal.taie.analysis.pta.core.solver.PointerFlowEdge;
 import pascal.taie.analysis.pta.core.solver.Solver;
-import pascal.taie.analysis.pta.core.solver.TypeFilter;
 import pascal.taie.analysis.pta.plugin.Plugin;
 import pascal.taie.analysis.pta.pts.PointsToSet;
-import pascal.taie.ir.IRPrinter;
 import pascal.taie.ir.exp.InvokeExp;
 import pascal.taie.ir.exp.InvokeInstanceExp;
-import pascal.taie.ir.exp.InvokeStatic;
 import pascal.taie.ir.exp.Var;
 import pascal.taie.ir.stmt.Invoke;
 import pascal.taie.language.classes.JMethod;
-import pascal.taie.language.type.ClassType;
 import pascal.taie.language.type.Type;
 import pascal.taie.util.collection.Maps;
 import pascal.taie.util.collection.MultiMap;
 import pascal.taie.util.collection.Pair;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class TaintAnalysis implements Plugin {
 
@@ -67,7 +61,7 @@ public class TaintAnalysis implements Plugin {
      * Map from method (which causes taint transfer) to set of relevant
      * {@link TaintTransfer}.
      */
-    private final MultiMap<JMethod, TaintTransfer> transfers = Maps.newMultiMap();
+    private final MultiMap<String, TaintTransfer> transfers = Maps.newMultiMap();
 
     /**
      * Map from variable to taint transfer information.
@@ -75,6 +69,7 @@ public class TaintAnalysis implements Plugin {
      * to be transferred to "value" variable with specified type.
      */
     private final MultiMap<Var, Pair<Var, Type>> varTransfers = Maps.newMultiMap();
+    private MultiMap<String, Var> sinkInfo = Maps.newMultiMap();
 
     private Solver solver;
 
@@ -99,8 +94,9 @@ public class TaintAnalysis implements Plugin {
         logger.info(config);
         config.getSources().forEach(s ->
                 sources.put(s.method(), s.type()));
-        config.getTransfers().forEach(t ->
-                transfers.put(t.method(), t));
+        config.getTransfers().forEach(t -> {
+            transfers.put(t.methodRef(), t);
+        });
     }
 
     public void onNewCSMethod(CSMethod csEntry) {
@@ -108,52 +104,57 @@ public class TaintAnalysis implements Plugin {
             return;
         entryTaint = false;
         JMethod entry = csEntry.getMethod();
+        Context ctx = csEntry.getContext();
         List<Var> params = entry.getIR().getParams();
         for (int i = 0; i < 1; i++) {
             Var param = params.get(i);
-            InvokeExp invokeExp = new InvokeStatic(entry.getRef(), params);
-            Invoke invoke = new Invoke(entry, invokeExp, null);
-            Obj taint = manager.makeTaint(invoke , ((ClassType) param.getType()).taintType());
+            Type type = param.getType();
+            Pointer pointer = csManager.getCSVar(ctx, param);
+            Obj taint = manager.makeTaint(null, type, "callback");
             solver.addVarPointsTo(csEntry.getContext(), param, emptyContext, taint);
         }
     }
+
     @Override
     public void onNewCallEdge(Edge<CSCallSite, CSMethod> edge) {
         Invoke callSite = edge.getCallSite().getCallSite();
+        String methodRef = callSite.getMethodRef().toString();
         JMethod callee = edge.getCallee().getMethod();
         // generate taint value from source call
         Var lhs = callSite.getLValue();
-        if (lhs != null && sources.containsKey(callee)) {
-            sources.get(callee).forEach(type -> {
-                Obj taint = manager.makeTaint(callSite, type);
-                solver.addVarPointsTo(edge.getCallSite().getContext(), lhs,
-                        emptyContext, taint);
-            });
-        }
-        Context ctx = edge.getCallSite().getContext();
-//        String declareClassName = callee.getDeclaringClass().getName();
-//        if (lhs != null && (declareClassName.startsWith("java.lang.Class") || declareClassName.startsWith("java.util"))) {
-//            callSite.getInvokeExp().getArgs().forEach(arg -> {
-//                PointsToSet newTaints = solver.makePointsToSet();
-//                CSVar CSArg = csManager.getCSVar(ctx, arg);
-//                CSVar CSLhs = csManager.getCSVar(ctx, lhs);
-//                solver.addPFGEdge(CSArg, CSLhs, PointerFlowEdge.Kind.TAINT);
+//        if (lhs != null && sources.containsKey(callee)) {
+//            sources.get(callee).forEach(type -> {
+//                Obj taint = manager.makeTaint(callSite, type);
+//                solver.addVarPointsTo(edge.getCallSite().getContext(), lhs,
+//                        emptyContext, taint);
 //            });
 //        }
-        // process taint transfer
-        transfers.get(callee).forEach(transfer -> {
+        // process sinks
+        config.getSinks().forEach(sink -> {
+            if (methodRef.equals(sink.methodRef())) {
+                Var var = getVar(callSite, sink.index());
+                sinkInfo.put(methodRef, var);
+            }
+        });
+//         process taint transfer
+        transfers.get(methodRef).forEach(transfer -> {
             Var from = getVar(callSite, transfer.from());
             Var to = getVar(callSite, transfer.to());
             // when transfer to result variable, and the call site
             // does not have result variable, then "to" is null.
             if (to != null) {
                 Type type = transfer.type();
-                varTransfers.put(from, new Pair<>(to, type));
-//                Context ctx = edge.getCallSite().getContext();
+//                varTransfers.put(from, new Pair<>(to, type));
+                Context ctx = edge.getCallSite().getContext();
                 CSVar csFrom = csManager.getCSVar(ctx, from);
-                PointsToSet pts = solver.getPointsToSetOf(csFrom);
-                if (!pts.isEmpty())
-                    transferTaint(pts, ctx, to, type);
+                CSVar csTo = csManager.getCSVar(ctx, to);
+                if (solver.getPointsToSetOf(csFrom).containTaint()) {
+                    TaintObj taint = manager.makeTaint(callSite, to.getType(), "jdk");
+                    solver.addVarPointsTo(ctx, to, emptyContext, taint);
+                } else {
+                    // propagate when csFrom contains taintObj
+                    solver.addPFGEdge(csFrom, csTo, PointerFlowEdge.Kind.TAINT);
+                }
             }
         });
     }
@@ -170,29 +171,6 @@ public class TaintAnalysis implements Plugin {
         };
     }
 
-    private void transferTaint(PointsToSet pts, Context ctx, Var to, Type type) {
-        PointsToSet newTaints = solver.makePointsToSet();
-        pts.objects()
-                .map(CSObj::getObject)
-                .filter(manager::isTaint)
-                .map(manager::getSourceCall)
-                .map(source -> manager.makeTaint(source, type))
-                .map(taint -> csManager.getCSObj(emptyContext, taint))
-                .forEach(newTaints::addObject);
-        if (!newTaints.isEmpty()) {
-            solver.addVarPointsTo(ctx, to, newTaints);
-        }
-    }
-
-    @Override
-    public void onNewPointsToSet(CSVar csVar, PointsToSet pts) {
-        varTransfers.get(csVar.getVar()).forEach(p -> {
-            Var to = p.first();
-            Type type = p.second();
-            transferTaint(pts, csVar.getContext(), to, type);
-        });
-    }
-
     @Override
     public void onFinish() {
         Set<TaintFlow> taintFlows = collectTaintFlows();
@@ -202,42 +180,38 @@ public class TaintAnalysis implements Plugin {
     private Set<TaintFlow> collectTaintFlows() {
         PointerAnalysisResult result = solver.getResult();
         Set<TaintFlow> taintFlows = new TreeSet<>();
-        config.getSinks().forEach(sink -> {
-            int i = sink.index();
-            result.getCallGraph()
-                    .getCallersOf(sink.method())
-                    .forEach(sinkCall -> {
-                        Var arg = sinkCall.getInvokeExp().getArg(i);
-                        result.getPointsToSet(arg)
-                                .stream()
-                                .filter(manager::isTaint)
-                                .map(manager::getSourceCall)
-                                .map(sourceCall -> new TaintFlow(sourceCall, sinkCall, i))
-                                .forEach(taintFlows::add);
-                    });
-        });
-        Map<JMethod, List> taints = new HashMap();
-        result.getVars().forEach(var -> {
-            if (var.getMethod().toString().startsWith("<ognl.") && //!p.matcher(var.getName()).matches() &&
-                    result.getPointsToSet(var).stream().filter(manager::isTaint).count() > 0){
-                        JMethod method = var.getMethod();
-                String name = var.getName();
-                if (taints.containsKey(method)) {
-                    taints.get(method).add(name);
-                } else {
-                    List<String> names = new ArrayList<>();
-                    names.add(name);
-                    taints.put(method, names);
+        sinkInfo.forEach((methodRef, var) -> {
+            AtomicBoolean flag = new AtomicBoolean(false);
+            result.getPointsToSet(var).forEach(obj -> {
+                if (obj instanceof TaintObj) {
+                    flag.set(true);
                 }
-            }
+            });
+            System.out.printf("Find sink: %s with %s in %s\n", methodRef, var.toString(), var.getMethod());
         });
-        taints.forEach((method, names) -> {
-            System.out.println("----------------------------");
-            System.out.println(method.toString());
-            method.getIR().forEach(s -> System.out.println(IRPrinter.toString(s)));
-            System.out.println(names.toString());
-            System.out.println("----------------------------");
-        });
+
+//        Map<JMethod, List> taints = new HashMap();
+//        result.getVars().forEach(var -> {
+//            if (var.getMethod().toString().startsWith("<ognl.") && //!p.matcher(var.getName()).matches() &&
+//                    result.getPointsToSet(var).stream().filter(manager::isTaint).count() > 0){
+//                        JMethod method = var.getMethod();
+//                String name = var.getName();
+//                if (taints.containsKey(method)) {
+//                    taints.get(method).add(name);
+//                } else {
+//                    List<String> names = new ArrayList<>();
+//                    names.add(name);
+//                    taints.put(method, names);
+//                }
+//            }
+//        });
+//        taints.forEach((method, names) -> {
+//            System.out.println("----------------------------");
+//            System.out.println(method.toString());
+//            method.getIR().forEach(s -> System.out.println(IRPrinter.toString(s)));
+//            System.out.println(names.toString());
+//            System.out.println("----------------------------");
+//        });
         return taintFlows;
     }
 }

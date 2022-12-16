@@ -45,6 +45,7 @@ import pascal.taie.analysis.pta.core.cs.selector.ContextSelector;
 import pascal.taie.analysis.pta.core.heap.HeapModel;
 import pascal.taie.analysis.pta.core.heap.MockObj;
 import pascal.taie.analysis.pta.core.heap.Obj;
+import pascal.taie.analysis.pta.core.heap.TaintObj;
 import pascal.taie.analysis.pta.plugin.Plugin;
 import pascal.taie.analysis.pta.pts.PointsToSet;
 import pascal.taie.analysis.pta.pts.PointsToSetFactory;
@@ -139,6 +140,8 @@ public class DefaultSolver implements Solver {
     private StmtProcessor stmtProcessor;
 
     private PointerAnalysisResult result;
+
+    private List<Invoke> unResolveCallSite = new ArrayList<>();
 
     public DefaultSolver(AnalysisOptions options, HeapModel heapModel,
                          ContextSelector contextSelector, CSManager csManager) {
@@ -248,6 +251,10 @@ public class DefaultSolver implements Solver {
                     processArrayStore(v, diff);
                     processArrayLoad(v, diff);
                     processCall(v, diff);
+                    CSObj csTaint = diff.getTaint();
+                    if (csTaint != null) {
+                        processTaint(v, csTaint);
+                    }
                     plugin.onNewPointsToSet(v, diff);
                 }
             } else if (entry instanceof WorkList.CallEdgeEntry eEntry) {
@@ -309,7 +316,7 @@ public class DefaultSolver implements Solver {
                 CSVar to = csManager.getCSVar(context, toVar);
                 pts.forEach(baseObj -> {
                     Obj obj = baseObj.getObject();
-                    if (obj instanceof MockObj && ((MockObj) obj).getDescription().equals("TaintObj")) {
+                    if (obj instanceof TaintObj) {
                         PointsToSet taintPTS = makePointsToSet();
                         taintPTS.addObject(baseObj);
                         addPointsTo(to, taintPTS);
@@ -336,12 +343,14 @@ public class DefaultSolver implements Solver {
             if (isConcerned(rvalue)) {
                 CSVar from = csManager.getCSVar(context, rvalue);
                 pts.forEach(array -> {
-//                    if (array.getObject().getType() instanceof  ArrayType) {
-                    ArrayIndex arrayIndex = csManager.getArrayIndex(array);
-                    // we need type guard for array stores as Java arrays
-                    // are covariant
-                    addPFGEdge(from, arrayIndex,
-                            PointerFlowEdge.Kind.ARRAY_STORE, arrayIndex.getType());
+                    if (array.getObject() instanceof TaintObj == false) {
+                        // donot transfer taint obj to array
+                        ArrayIndex arrayIndex = csManager.getArrayIndex(array);
+                        // we need type guard for array stores as Java arrays
+                        // are covariant
+                        addPFGEdge(from, arrayIndex,
+                                PointerFlowEdge.Kind.ARRAY_STORE, arrayIndex.getType());
+                    }
                 });
             }
         }
@@ -368,6 +377,50 @@ public class DefaultSolver implements Solver {
         }
     }
 
+    // explore unResolveCallSites with CHA if base/arg is taint
+    private void processTaint(CSVar csVar, CSObj csTaint) {
+        // explore CHA since pts contains taint
+        Var var = csVar.getVar();
+        Map<Invoke, Boolean> callSites = new HashMap<>();
+//        Set<Invoke> invokes = new HashSet<>();
+        var.getInvokes().forEach(invoke -> {
+            if (unResolveCallSite.contains(invoke))
+                callSites.put(invoke, true);
+//            if (invoke.isJDK())
+//                invokes.add(invoke);
+        });
+        var.getArgInvokes().forEach(invoke -> {
+            if (unResolveCallSite.contains(invoke))
+                callSites.put(invoke, false);
+//            if (invoke.isJDK())
+//                invokes.add(invoke);
+        });
+        unResolveCallSite.removeAll(callSites.keySet());
+
+        Context context = csTaint.getContext();
+//        invokes.forEach(invoke -> {
+//            CSCallSite csCallSite = csManager.getCSCallSite(context, invoke);
+//            plugin.onJDKCSCallSite(csCallSite);
+//        });
+        callSites.forEach((callSite, isBase) -> {
+            // explore: empty.virtualCall(taintArg, ...) callee with CHA
+            Set<JMethod> methods = CallGraphs.resolve(callSite);
+            methods.forEach(callee -> {
+                // select context
+                CSCallSite csCallSite = csManager.getCSCallSite(context, callSite);
+                Context calleeContext = contextSelector.selectContext(
+                        csCallSite, csTaint, callee);
+                // build call edge
+                CSMethod csCallee = csManager.getCSMethod(calleeContext, callee);
+                addCallEdge(new Edge<>(CallGraphs.getCallKind(callSite),
+                        csCallSite, csCallee));
+                if (isBase && !isIgnored(callee)) {
+                    addVarPointsTo(calleeContext, callee.getIR().getThis(),csTaint);
+                }
+            });
+        });
+    }
+
     /**
      * Processes instance calls when points-to set of the receiver variable changes.
      *
@@ -379,36 +432,27 @@ public class DefaultSolver implements Solver {
         Var var = recv.getVar();
         for (Invoke callSite : var.getInvokes()) {
             pts.forEach(recvObj -> {
-                Obj obj = recvObj.getObject();
-                Set<JMethod> methods = new HashSet<>();
-                if (obj instanceof MockObj && ((MockObj) obj).getDescription().equals("TaintObj")) {
-                    methods = CallGraphs.resolve(callSite);
-                } else {
-                    // resolve callee
-                    JMethod callee = CallGraphs.resolveCallee(
-                            recvObj.getObject().getType(), callSite);
-                    if (callee != null)
-                        methods.add(callee);
-                }
-                // jdk function may transfer taint
-                if (!methods.isEmpty()) {
-                    methods.forEach(callee -> {
-                        // select context
-                        CSCallSite csCallSite = csManager.getCSCallSite(context, callSite);
-                        Context calleeContext = contextSelector.selectContext(
-                                csCallSite, recvObj, callee);
-                        // build call edge
-                        CSMethod csCallee = csManager.getCSMethod(calleeContext, callee);
-                        addCallEdge(new Edge<>(CallGraphs.getCallKind(callSite),
-                                csCallSite, csCallee));
-                        // pass receiver object to *this* variable
-                        if (!isIgnored(callee)) {
-                            addVarPointsTo(calleeContext, callee.getIR().getThis(),
-                                    recvObj);
-                        }
-                    });
+                // resolve callee
+                JMethod callee = CallGraphs.resolveCallee(
+                        recvObj.getObject().getType(), callSite);
+
+                if (callee != null) {
+                    // select context
+                    CSCallSite csCallSite = csManager.getCSCallSite(context, callSite);
+                    Context calleeContext = contextSelector.selectContext(
+                            csCallSite, recvObj, callee);
+                    // build call edge
+                    CSMethod csCallee = csManager.getCSMethod(calleeContext, callee);
+                    addCallEdge(new Edge<>(CallGraphs.getCallKind(callSite),
+                            csCallSite, csCallee));
+                    // pass receiver object to *this* variable
+                    if (!isIgnored(callee)) {
+                        addVarPointsTo(calleeContext, callee.getIR().getThis(),
+                                recvObj);
+                    }
                 } else {
                     plugin.onUnresolvedCall(recvObj, context, callSite);
+                    unResolveCallSite.add(callSite);
                 }
             });
         }

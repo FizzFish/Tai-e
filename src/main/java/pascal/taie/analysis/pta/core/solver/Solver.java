@@ -119,6 +119,7 @@ public interface Solver {
      * Adds an edge "source -> target" to the PFG.
      * For the objects pointed to by "source", only the ones whose types
      * are subtypes of given type are propagated to "target".
+     * cast/arrystore/lambda/reflection
      */
     default void addPFGEdge(Pointer source, Pointer target, PointerFlowEdge.Kind kind, Type type) {
         addPFGEdge(source, target, kind, new TypeFilter(type, this));

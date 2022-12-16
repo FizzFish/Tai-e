@@ -23,6 +23,7 @@
 package pascal.taie.analysis.pta.pts;
 
 import pascal.taie.analysis.pta.core.cs.element.CSObj;
+import pascal.taie.analysis.pta.core.heap.TaintObj;
 import pascal.taie.util.Copyable;
 
 import java.util.Iterator;
@@ -61,7 +62,20 @@ public interface PointsToSet extends Iterable<CSObj>, Copyable<PointsToSet> {
      * @return true if this set contains given object, otherwise false.
      */
     boolean contains(CSObj obj);
-
+    default CSObj getTaint() {
+        for (CSObj csObj : getObjects()) {
+            if (csObj.getObject() instanceof TaintObj)
+                return csObj;
+        }
+        return null;
+    }
+    default boolean containTaint() {
+        for (CSObj csObj : getObjects()) {
+            if (csObj.getObject() instanceof TaintObj)
+                return true;
+        }
+        return false;
+    }
     /**
      * @return whether this set if empty.
      */

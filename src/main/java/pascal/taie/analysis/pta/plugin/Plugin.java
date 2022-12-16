@@ -88,6 +88,7 @@ public interface Plugin {
     default void onNewMethod(JMethod method) {
     }
 
+
     /**
      * Invoked when a new reachable context-sensitive method is discovered.
      *
@@ -96,6 +97,8 @@ public interface Plugin {
     default void onNewCSMethod(CSMethod csMethod) {
     }
 
+    default void onJDKCSCallSite(CSCallSite csCallSite) {
+    }
     /**
      * Invoked when pointer analysis failed to resolve callee (i.e., resolve
      * to null) on a receiver object. Some plugins take over such cases to
