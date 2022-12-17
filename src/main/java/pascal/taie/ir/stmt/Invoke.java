@@ -170,4 +170,9 @@ public class Invoke extends DefinitionStmt<Var, InvokeExp>
         return String.format("%s[%d@L%d] %s%s",
                 container, getIndex(), getLineNumber(), ret, invokeExp);
     }
+    public String format() {
+        String ret = result == null ? "" : result + " = ";
+        return String.format("[%s|%s|%s%s]",
+                container.getDeclaringClass(), container.getName(), ret, invokeExp);
+    }
 }

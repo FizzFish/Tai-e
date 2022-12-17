@@ -111,7 +111,7 @@ public class TaintAnalysis implements Plugin {
             Var param = params.get(i);
             Type type = param.getType();
             Pointer pointer = csManager.getCSVar(ctx, param);
-            Obj taint = manager.makeTaint(null, type, "callback");
+            Obj taint = manager.makeTaint(null, type, entry.getSignature()+ " begin");
             solver.addVarPointsTo(csEntry.getContext(), param, emptyContext, taint);
         }
     }
@@ -141,7 +141,7 @@ public class TaintAnalysis implements Plugin {
         transfers.get(methodRef).forEach(transfer -> {
             Var from = getVar(callSite, transfer.from());
             Var to = getVar(callSite, transfer.to());
-            String stmt = callSite.toString();
+            String stmt = callSite.format();
             // when transfer to result variable, and the call site
             // does not have result variable, then "to" is null.
             if (to != null) {
