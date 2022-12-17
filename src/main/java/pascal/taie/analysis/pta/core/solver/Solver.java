@@ -109,7 +109,7 @@ public interface Solver {
      * Adds an edge "source -> target" to the PFG.
      */
     default void addPFGEdge(Pointer source, Pointer target, PointerFlowEdge.Kind kind) {
-        addPFGEdge(source, target, kind, Identity.get());
+        addPFGEdge(source, target, kind, new Identity());
     }
 
     /**
@@ -184,4 +184,6 @@ public interface Solver {
      * @return pointer analysis result.
      */
     PointerAnalysisResult getResult();
+
+    PointerFlowGraph getPFG();
 }

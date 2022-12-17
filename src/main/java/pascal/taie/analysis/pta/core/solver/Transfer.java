@@ -29,7 +29,7 @@ import pascal.taie.analysis.pta.pts.PointsToSet;
  * For a given pointer flow edge "source" -> "target", the function defines
  * how the points-to facts of "source" node are propagated to the "target" node.
  */
-@FunctionalInterface
+
 public interface Transfer {
 
     /**
@@ -40,4 +40,6 @@ public interface Transfer {
      * @return set of objects that are propagated to the "target" node.
      */
     PointsToSet apply(PointerFlowEdge edge, PointsToSet input);
+
+     boolean hasTaint();
 }

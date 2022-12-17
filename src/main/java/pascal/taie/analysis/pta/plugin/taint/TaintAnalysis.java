@@ -34,6 +34,7 @@ import pascal.taie.analysis.pta.core.solver.PointerFlowEdge;
 import pascal.taie.analysis.pta.core.solver.Solver;
 import pascal.taie.analysis.pta.plugin.Plugin;
 import pascal.taie.analysis.pta.pts.PointsToSet;
+import pascal.taie.ir.IRPrinter;
 import pascal.taie.ir.exp.InvokeExp;
 import pascal.taie.ir.exp.InvokeInstanceExp;
 import pascal.taie.ir.exp.Var;
@@ -156,9 +157,10 @@ public class TaintAnalysis implements Plugin {
                 CSObj taint = pts.getTaint();
                 if (taint != null)
                     solver.addVarPointsTo(ctx, to, emptyContext, manager.makeTaint(taint.getObject(), type, stmt));
-                else
+                else {
                     varTransfers.put(from, new ThreePair<>(to, type, stmt));
 //                    solver.addPFGEdge(csFrom, csManager.getCSVar(ctx, to), PointerFlowEdge.Kind.TAINT, type);
+                }
             }
         });
     }
@@ -199,38 +201,50 @@ public class TaintAnalysis implements Plugin {
         PointerAnalysisResult result = solver.getResult();
         Set<TaintFlow> taintFlows = new TreeSet<>();
         sinkInfo.forEach((methodRef, var) -> {
-            result.getPointsToSet(var).forEach(obj -> {
-                if (obj instanceof TaintObj) {
-                    System.out.println("----------------------------");
-                    System.out.println(obj.toString());
-                    System.out.println("----------------------------");
-                }
-            });
+//            result.getPointsToSet(var).forEach(obj -> {
+//                if (obj instanceof TaintObj) {
+//                    System.out.println("----------------------------");
+//                    System.out.println(obj.toString());
+//                    System.out.println("----------------------------");
+//                }
+//            });
             System.out.printf("Find sink: %s with %s in %s\n", methodRef, var.toString(), var.getMethod());
         });
-
-//        Map<JMethod, List> taints = new HashMap();
-//        result.getVars().forEach(var -> {
-//            if (var.getMethod().toString().startsWith("<ognl.") && //!p.matcher(var.getName()).matches() &&
-//                    result.getPointsToSet(var).stream().filter(manager::isTaint).count() > 0){
-//                        JMethod method = var.getMethod();
-//                String name = var.getName();
-//                if (taints.containsKey(method)) {
-//                    taints.get(method).add(name);
-//                } else {
-//                    List<String> names = new ArrayList<>();
-//                    names.add(name);
-//                    taints.put(method, names);
-//                }
-//            }
-//        });
-//        taints.forEach((method, names) -> {
-//            System.out.println("----------------------------");
-//            System.out.println(method.toString());
-//            method.getIR().forEach(s -> System.out.println(IRPrinter.toString(s)));
-//            System.out.println(names.toString());
-//            System.out.println("----------------------------");
-//        });
+//        long num = result.getObjects().stream().filter(manager::isTaint).count();
+//        System.out.printf("total %d taint\n", num);
+//        printTaint(result);
+        solver.getPFG().getPointers().forEach(p -> {
+            p.getOutEdges().forEach(e -> {
+                if (e.getTransfer().hasTaint())
+                    System.out.println(e.toString());
+//                    System.out.printf("%s | %s | %s\n", p.toString(), e.toString(), e.getTarget().toString());
+            });
+        });
         return taintFlows;
+    }
+
+    private void printTaint(PointerAnalysisResult result) {
+        Map<JMethod, List> taints = new HashMap();
+        result.getVars().forEach(var -> {
+            if (var.getMethod().toString().startsWith("<ognl.") && //!p.matcher(var.getName()).matches() &&
+                    result.getPointsToSet(var).stream().filter(manager::isTaint).count() > 0){
+                        JMethod method = var.getMethod();
+                String name = var.getName();
+                if (taints.containsKey(method)) {
+                    taints.get(method).add(name);
+                } else {
+                    List<String> names = new ArrayList<>();
+                    names.add(name);
+                    taints.put(method, names);
+                }
+            }
+        });
+        taints.forEach((method, names) -> {
+            System.out.println("----------------------------");
+            System.out.println(method.toString());
+            method.getIR().forEach(s -> System.out.println(IRPrinter.toString(s)));
+            System.out.println(names.toString());
+            System.out.println("----------------------------");
+        });
     }
 }

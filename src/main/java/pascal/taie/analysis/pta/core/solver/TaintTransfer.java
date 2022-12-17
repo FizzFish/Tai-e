@@ -39,7 +39,9 @@ public class TaintTransfer implements Transfer {
         this.type = type;
         this.ptsFactory = solver::makePointsToSet;
     }
-
+    public boolean hasTaint() {
+        return true;
+    }
     @Override
     public PointsToSet apply(PointerFlowEdge edge, PointsToSet input) {
         PointsToSet result = ptsFactory.get();

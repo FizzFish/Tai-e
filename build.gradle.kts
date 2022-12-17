@@ -17,6 +17,8 @@ dependencies {
     implementation("org.soot-oss:soot:4.3.0-20211223.212205-256")
     // Eliminate SLF4J warning
     implementation("org.slf4j:slf4j-nop:1.7.5")
+    // Neo4j
+    implementation("org.neo4j.driver:neo4j-java-driver:5.3.0")
 
     testImplementation("junit:junit:4.13")
 }

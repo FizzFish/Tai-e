@@ -46,11 +46,18 @@ public class TypeFilter implements Transfer {
     private final TypeSystem typeSystem;
 
     private final Supplier<PointsToSet> ptsFactory;
+    private boolean hasTaintObj;
 
     public TypeFilter(Type type, Solver solver) {
         this.type = type;
         this.typeSystem = solver.getTypeSystem();
         this.ptsFactory = solver::makePointsToSet;
+        this.hasTaintObj = false;
+    }
+
+    @Override
+    public boolean hasTaint() {
+        return hasTaintObj;
     }
 
     @Override
@@ -61,8 +68,12 @@ public class TypeFilter implements Transfer {
 //                .forEach(result::addObject);
         for (CSObj csobj : input) {
             Obj obj = csobj.getObject();
-            if (typeSystem.isSubtype(type, obj.getType()) || obj instanceof TaintObj)
+            if (typeSystem.isSubtype(type, obj.getType()))
                 result.addObject(csobj);
+            if (obj instanceof TaintObj) {
+                hasTaintObj = true;
+                result.addObject(csobj);
+            }
         }
         return result;
     }

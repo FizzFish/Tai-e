@@ -155,6 +155,9 @@ public class DefaultSolver implements Solver {
         onlyApp = options.getBoolean("only-app");
     }
 
+    public PointerFlowGraph getPFG() {
+        return pointerFlowGraph;
+    }
     @Override
     public AnalysisOptions getOptions() {
         return options;

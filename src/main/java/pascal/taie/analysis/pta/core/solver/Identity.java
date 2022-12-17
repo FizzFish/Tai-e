@@ -24,16 +24,21 @@ package pascal.taie.analysis.pta.core.solver;
 
 import pascal.taie.analysis.pta.pts.PointsToSet;
 
-public enum Identity implements Transfer {
+public class Identity implements Transfer {
 
-    INSTANCE;
+    private boolean hasTaintObj;
 
-    public static Transfer get() {
-        return INSTANCE;
+    public Identity() {
+        hasTaintObj = false;
     }
 
     @Override
     public PointsToSet apply(PointerFlowEdge edge, PointsToSet input) {
+        if (input.containTaint())
+            hasTaintObj = true;
         return input;
+    }
+    public boolean hasTaint() {
+        return hasTaintObj;
     }
 }
