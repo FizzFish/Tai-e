@@ -125,8 +125,7 @@ public class TaintAnalysis implements Plugin {
     public void onNewCallEdge(Edge<CSCallSite, CSMethod> edge) {
         Invoke callSite = edge.getCallSite().getCallSite();
         JMethod caller = callSite.getMethodRef().resolve();
-        String methodRef = callSite.getMethodRef().toString();
-        JMethod callee = edge.getCallee().getMethod();
+        Context ctx = edge.getCallSite().getContext();
         // generate taint value from source call
 //        Var lhs = callSite.getLValue();
 //        if (lhs != null && sources.containsKey(callee)) {
@@ -140,7 +139,6 @@ public class TaintAnalysis implements Plugin {
         config.getSinks().forEach(sink -> {
             if (caller == sink.method()) {
                 Var var = getVar(callSite, sink.index());
-//                String methodFormat = String.format("%s:%s", callSite.getInvokeExp().)
                 sinkInfo.put(sink.method(), var);
             }
         });
@@ -155,7 +153,7 @@ public class TaintAnalysis implements Plugin {
                 Type type = transfer.type();
                 // propagate when csFrom contains taintObj
                 // another resolve: varTransfers.put(from, new ThreePair<>(to, type, stmt));
-                Context ctx = edge.getCallSite().getContext();
+//                Context ctx = edge.getCallSite().getContext();
                 CSVar csFrom = csManager.getCSVar(ctx, from);
                 PointsToSet pts = solver.getPointsToSetOf(csFrom);
                 CSObj taint = pts.getTaint();
@@ -204,18 +202,17 @@ public class TaintAnalysis implements Plugin {
     private Set<TaintFlow> collectTaintFlows() {
         PointerAnalysisResult result = solver.getResult();
         Set<TaintFlow> taintFlows = new TreeSet<>();
-        sinkInfo.forEach((methodRef, var) -> {
-//            result.getPointsToSet(var).forEach(obj -> {
-//                if (obj instanceof TaintObj) {
-//                    System.out.println("----------------------------");
-//                    System.out.println(obj.toString());
-//                    System.out.println("----------------------------");
-//                }
-//            });
-            System.out.printf("Find sink: %s with %s in %s\n", methodRef, var.toString(), var.getMethod());
+        MultiMap<JMethod, Var> sinkResult = Maps.newMultiMap();
+        // clear unTaint sinkVar
+        sinkInfo.forEach((method, var) -> {
+            if (result.getPointsToSet(var).stream().filter(manager::isTaint).count() > 0) {
+                sinkResult.put(method, var);
+                System.out.printf("Find sink: %s with %s in %s\n", method, var.toString(), var.getMethod());
+            }
         });
-        long num = result.getObjects().stream().filter(manager::isTaint).count();
-        System.out.printf("total %d taintObj\n", num);
+        sinkInfo = sinkResult;
+//        long num = result.getObjects().stream().filter(manager::isTaint).count();
+//        System.out.printf("total %d taintObj\n", num);
 //        printTaint(result);
         showRelation();
         return taintFlows;
@@ -225,8 +222,8 @@ public class TaintAnalysis implements Plugin {
         var graph = new NeoGraph("bolt://localhost:7687", "neo4j", "password");
         solver.getPFG().getPointers().forEach(p -> {
             p.getOutEdges().forEach(e -> {
-                if (e.getTransfer().hasTaint()) {
-                    System.out.println(e.format());
+                if (e.getTransfer().hasTaint() && e.getSource() != e.getTarget()) {
+//                    System.out.println(e.format());
                     graph.addRelation(e);
                 }
             });
@@ -238,9 +235,8 @@ public class TaintAnalysis implements Plugin {
     private void printTaint(PointerAnalysisResult result) {
         Map<JMethod, List> taints = new HashMap();
         result.getVars().forEach(var -> {
-            if (var.getMethod().toString().startsWith("<ognl.") && //!p.matcher(var.getName()).matches() &&
-                    result.getPointsToSet(var).stream().filter(manager::isTaint).count() > 0){
-                        JMethod method = var.getMethod();
+            if (result.getPointsToSet(var).stream().filter(manager::isTaint).count() > 0){
+                JMethod method = var.getMethod();
                 String name = var.getName();
                 if (taints.containsKey(method)) {
                     taints.get(method).add(name);
@@ -310,14 +306,6 @@ class NeoGraph implements AutoCloseable {
     private String handle(JField field) {
         return String.format("Field {name:\"%s\", class:\"%s\"}", field.getDeclaringClass(), field.getName());
     }
-
-//    public void addRelation(String info) {
-//        String[] edge = info.split("-");
-//        String[] src = edge[0].split(":");
-//        String[] target = edge[2].split(":");
-//        var query = new Query(String.format("MERGE (r:%s) MERGE (s:%s) MERGE (r)-[:%s]->(s)", handle(edge[0]), handle(edge[2]), edge[1]));
-//        session.run(query);
-//    }
     public void addRelation(PointerFlowEdge edge) {
         PointerFlowEdge.Kind kind = edge.getKind();
         if (EnumSet.of(PARAMETER_PASSING, RETURN, CALL, TAINT).contains(kind)){

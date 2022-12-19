@@ -4,7 +4,7 @@
   options:
     cs: ci # | k-[obj|type|call][-k'h]
     only-app: true # only analyze application code
-    implicit-entries: true # analyze implicit entries
+    implicit-entries: false # analyze implicit entries
     merge-string-constants: false
     merge-string-objects: true
     merge-string-builders: true
@@ -17,7 +17,7 @@
     action: null # | dump | compare
     action-file: null # path of file to dump/compare
     reflection-log: null # path to reflection log
-    taint-config: null # path to config file of taint analysis,
+    taint-config: src/test/resources/taint-config.yml # path to config file of taint analysis,
     # when this file is given, taint analysis will be enabled
     plugins: [ ] # | [ pluginClass, ... ]
 

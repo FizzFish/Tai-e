@@ -141,7 +141,7 @@ public class DefaultSolver implements Solver {
 
     private PointerAnalysisResult result;
 
-    private List<Invoke> unResolveCallSite = new ArrayList<>();
+    private List<Invoke> chaCallSite = new ArrayList<>();
 
     public DefaultSolver(AnalysisOptions options, HeapModel heapModel,
                          ContextSelector contextSelector, CSManager csManager) {
@@ -253,11 +253,12 @@ public class DefaultSolver implements Solver {
                     processInstanceLoad(v, diff);
                     processArrayStore(v, diff);
                     processArrayLoad(v, diff);
-                    processCall(v, diff);
+
                     CSObj csTaint = diff.getTaint();
                     if (csTaint != null) {
                         processTaint(v, csTaint);
-                    }
+                    } else
+                        processCall(v, diff);
                     plugin.onNewPointsToSet(v, diff);
                 }
             } else if (entry instanceof WorkList.CallEdgeEntry eEntry) {
@@ -389,14 +390,17 @@ public class DefaultSolver implements Solver {
         Map<Invoke, Boolean> callSites = new HashMap<>();
 //        Set<Invoke> invokes = new HashSet<>();
         var.getInvokes().forEach(invoke -> {
-            if (unResolveCallSite.contains(invoke))
+            if (!chaCallSite.contains(invoke)) {
                 callSites.put(invoke, true);
+                chaCallSite.add(invoke);
+            }
         });
         var.getArgInvokes().forEach(invoke -> {
-            if (unResolveCallSite.contains(invoke))
+            if (!chaCallSite.contains(invoke)) {
                 callSites.put(invoke, false);
+                chaCallSite.add(invoke);
+            }
         });
-        unResolveCallSite.removeAll(callSites.keySet());
 
         Context context = csTaint.getContext();
         callSites.forEach((callSite, isBase) -> {
@@ -415,7 +419,7 @@ public class DefaultSolver implements Solver {
                     Var thisVar = callee.getIR().getThis();
                     CSVar CSThis = csManager.getCSVar(calleeContext, thisVar);
                     addVarPointsTo(calleeContext, thisVar, csTaint);
-                    Transfer callTransfer = new CallTransfer(csTaint.getObject() instanceof TaintObj);
+                    Transfer callTransfer = new CallTransfer(true);
                     addPFGEdge(csVar, CSThis, PointerFlowEdge.Kind.CALL, callTransfer);
                 }
             });
@@ -456,7 +460,6 @@ public class DefaultSolver implements Solver {
                     }
                 } else {
                     plugin.onUnresolvedCall(recvObj, context, callSite);
-                    unResolveCallSite.add(callSite);
                 }
             });
         }
