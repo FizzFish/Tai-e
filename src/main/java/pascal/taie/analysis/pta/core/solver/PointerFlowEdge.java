@@ -70,6 +70,10 @@ public class PointerFlowEdge extends AbstractEdge<Pointer> {
         return "[" + kind + "]" + source + " -> " + target;
     }
 
+    public String format() {
+        return String.format("%s-%s-%s", source.format(), kind, target.format());
+    }
+
     public enum Kind {
         LOCAL_ASSIGN,
         CAST,
@@ -85,6 +89,7 @@ public class PointerFlowEdge extends AbstractEdge<Pointer> {
 
         PARAMETER_PASSING,
         RETURN,
+        CALL,
 
         TAINT,
     }

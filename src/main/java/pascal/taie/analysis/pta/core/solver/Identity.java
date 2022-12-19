@@ -41,4 +41,9 @@ public class Identity implements Transfer {
     public boolean hasTaint() {
         return hasTaintObj;
     }
+
+    @Override
+    public boolean needPropagate() {
+        return true;
+    }
 }

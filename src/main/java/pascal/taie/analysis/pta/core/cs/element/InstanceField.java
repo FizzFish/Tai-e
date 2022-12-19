@@ -60,6 +60,11 @@ public class InstanceField extends AbstractPointer {
     }
 
     @Override
+    public String format() {
+        return String.format("%s:%s", field.getDeclaringClass(), field.getName());
+    }
+
+    @Override
     public String toString() {
         return base + "." + field.getName();
     }

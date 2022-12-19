@@ -50,6 +50,11 @@ public class StaticField extends AbstractPointer {
     }
 
     @Override
+    public String format() {
+        return field.toString();
+    }
+
+    @Override
     public String toString() {
         return field.toString();
     }

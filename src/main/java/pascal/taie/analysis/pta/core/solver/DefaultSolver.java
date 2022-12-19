@@ -275,8 +275,10 @@ public class DefaultSolver implements Solver {
         logger.trace("Propagate {} to {}", pointsToSet, pointer);
         PointsToSet diff = getPointsToSetOf(pointer).addAllDiff(pointsToSet);
         if (!diff.isEmpty()) {
-            pointerFlowGraph.getOutEdgesOf(pointer).forEach(edge ->
-                    addPointsTo(edge.getTarget(), edge.getTransfer().apply(edge, diff)));
+            pointerFlowGraph.getOutEdgesOf(pointer).forEach(edge -> {
+                if (edge.getTransfer().needPropagate())
+                    addPointsTo(edge.getTarget(), edge.getTransfer().apply(edge, diff));
+            });
         }
         return diff;
     }
@@ -389,22 +391,14 @@ public class DefaultSolver implements Solver {
         var.getInvokes().forEach(invoke -> {
             if (unResolveCallSite.contains(invoke))
                 callSites.put(invoke, true);
-//            if (invoke.isJDK())
-//                invokes.add(invoke);
         });
         var.getArgInvokes().forEach(invoke -> {
             if (unResolveCallSite.contains(invoke))
                 callSites.put(invoke, false);
-//            if (invoke.isJDK())
-//                invokes.add(invoke);
         });
         unResolveCallSite.removeAll(callSites.keySet());
 
         Context context = csTaint.getContext();
-//        invokes.forEach(invoke -> {
-//            CSCallSite csCallSite = csManager.getCSCallSite(context, invoke);
-//            plugin.onJDKCSCallSite(csCallSite);
-//        });
         callSites.forEach((callSite, isBase) -> {
             // explore: empty.virtualCall(taintArg, ...) callee with CHA
             Set<JMethod> methods = CallGraphs.resolve(callSite);
@@ -418,7 +412,11 @@ public class DefaultSolver implements Solver {
                 addCallEdge(new Edge<>(CallGraphs.getCallKind(callSite),
                         csCallSite, csCallee));
                 if (isBase && !isIgnored(callee)) {
-                    addVarPointsTo(calleeContext, callee.getIR().getThis(),csTaint);
+                    Var thisVar = callee.getIR().getThis();
+                    CSVar CSThis = csManager.getCSVar(calleeContext, thisVar);
+                    addVarPointsTo(calleeContext, thisVar, csTaint);
+                    Transfer callTransfer = new CallTransfer(csTaint.getObject() instanceof TaintObj);
+                    addPFGEdge(csVar, CSThis, PointerFlowEdge.Kind.CALL, callTransfer);
                 }
             });
         });
@@ -450,8 +448,11 @@ public class DefaultSolver implements Solver {
                             csCallSite, csCallee));
                     // pass receiver object to *this* variable
                     if (!isIgnored(callee)) {
-                        addVarPointsTo(calleeContext, callee.getIR().getThis(),
-                                recvObj);
+                        Var thisVar = callee.getIR().getThis();
+                        CSVar CSThis = csManager.getCSVar(calleeContext, thisVar);
+                        addVarPointsTo(calleeContext, thisVar, recvObj);
+                        Transfer callTransfer = new CallTransfer(recvObj.getObject() instanceof TaintObj);
+                        addPFGEdge(recv, CSThis, PointerFlowEdge.Kind.CALL, callTransfer);
                     }
                 } else {
                     plugin.onUnresolvedCall(recvObj, context, callSite);
@@ -746,7 +747,7 @@ public class DefaultSolver implements Solver {
     public void addPFGEdge(Pointer source, Pointer target, PointerFlowEdge.Kind kind,
                            Transfer transfer) {
         PointerFlowEdge edge = new PointerFlowEdge(kind, source, target, transfer);
-        if (pointerFlowGraph.addEdge(edge)) {
+        if (pointerFlowGraph.addEdge(edge) && edge.getTransfer().needPropagate()) {
             PointsToSet targetSet = transfer.apply(edge, getPointsToSetOf(source));
             if (!targetSet.isEmpty()) {
                 addPointsTo(target, targetSet);

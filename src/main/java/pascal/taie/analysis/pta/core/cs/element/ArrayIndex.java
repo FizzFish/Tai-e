@@ -51,6 +51,11 @@ public class ArrayIndex extends AbstractPointer {
     }
 
     @Override
+    public String format() {
+        return "array";
+    }
+
+    @Override
     public String toString() {
         return array + "[*]";
     }

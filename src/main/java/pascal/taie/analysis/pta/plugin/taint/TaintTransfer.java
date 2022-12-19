@@ -36,7 +36,7 @@ import pascal.taie.language.type.Type;
  *     <li>type: the type of the transferred taint object
  * </ul>
  */
-record TaintTransfer(String methodRef, int from, int to, Type type) {
+record TaintTransfer(JMethod method, int from, int to, Type type) {
 
     /**
      * Special number representing the base variable.
@@ -61,7 +61,7 @@ record TaintTransfer(String methodRef, int from, int to, Type type) {
 
     @Override
     public String toString() {
-        return methodRef + ": " + toString(from) + " -> " + toString(to) +
+        return method + ": " + toString(from) + " -> " + toString(to) +
                 "(" + type + ")";
     }
 

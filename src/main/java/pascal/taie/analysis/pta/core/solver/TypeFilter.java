@@ -61,6 +61,11 @@ public class TypeFilter implements Transfer {
     }
 
     @Override
+    public boolean needPropagate() {
+        return true;
+    }
+
+    @Override
     public PointsToSet apply(PointerFlowEdge edge, PointsToSet input) {
         PointsToSet result = ptsFactory.get();
 //        input.objects()

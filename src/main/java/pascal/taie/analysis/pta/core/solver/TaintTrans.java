@@ -23,25 +23,33 @@
 package pascal.taie.analysis.pta.core.solver;
 
 import pascal.taie.analysis.pta.core.cs.element.CSObj;
-import pascal.taie.analysis.pta.core.heap.MockObj;
-import pascal.taie.analysis.pta.core.heap.Obj;
 import pascal.taie.analysis.pta.core.heap.TaintObj;
 import pascal.taie.analysis.pta.pts.PointsToSet;
 import pascal.taie.language.type.Type;
 
 import java.util.function.Supplier;
 
-public class TaintTransfer implements Transfer {
+public class TaintTrans implements Transfer {
 
     private final Supplier<PointsToSet> ptsFactory;
     private final Type type;
-    public TaintTransfer(Type type, Solver solver) {
+    private boolean needPropagate;
+    public TaintTrans(Type type, Solver solver) {
         this.type = type;
         this.ptsFactory = solver::makePointsToSet;
+        this.needPropagate = true;
     }
     public boolean hasTaint() {
         return true;
     }
+    @Override
+    public boolean needPropagate() {
+        return needPropagate;
+    }
+    public void setPropagate(boolean need) {
+        needPropagate = need;
+    }
+
     @Override
     public PointsToSet apply(PointerFlowEdge edge, PointsToSet input) {
         PointsToSet result = ptsFactory.get();

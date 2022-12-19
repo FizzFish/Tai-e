@@ -94,4 +94,6 @@ public interface Pointer extends Indexable {
      * @return the type of this pointer
      */
     Type getType();
+
+    String format();
 }

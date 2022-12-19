@@ -42,4 +42,5 @@ public interface Transfer {
     PointsToSet apply(PointerFlowEdge edge, PointsToSet input);
 
      boolean hasTaint();
+    boolean needPropagate();
 }

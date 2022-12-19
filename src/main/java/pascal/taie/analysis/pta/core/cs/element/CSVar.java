@@ -59,6 +59,11 @@ public class CSVar extends AbstractPointer implements CSElement {
     }
 
     @Override
+    public String format() {
+        return String.format("%s:%s:%s", var.getMethod().getDeclaringClass(), var.getMethod().getName(), var.getName());
+    }
+
+    @Override
     public String toString() {
         return context + ":" + var.getMethod() + "/" + var.getName();
     }
