@@ -85,10 +85,12 @@ public final class CallGraphs {
     }
 
     public static Set<JMethod> resolve(Invoke callSite) {
+        Set<JMethod> methods = new HashSet();
+        if (callSite.isDynamic()) return methods;
         MethodRef methodRef = callSite.getMethodRef();
         JClass jclass = methodRef.getDeclaringClass();
         ClassHierarchy hierarchy = World.get().getClassHierarchy();
-        Set<JMethod> methods = new HashSet();
+
         Set<JClass> subClasses = new HashSet<>();
         subClasses.add(jclass);
         if (callSite.isInterface())

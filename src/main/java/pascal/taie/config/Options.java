@@ -36,8 +36,14 @@ import picocli.CommandLine.Option;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.sql.Array;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Option class for Tai-e.
@@ -86,6 +92,20 @@ public class Options {
     private String classPath;
 
     public String getClassPath() {
+        if (classPath.endsWith("*")) {
+            String path = classPath.substring(0,classPath.length()-2);
+            try {
+                List res = Files.walk(Paths.get(path))
+                        .filter(Files::isRegularFile).map(String::valueOf)
+                        .collect(Collectors.toList());
+                classPath = String.join(";", res);
+            } catch (IOException e) {
+                e.printStackTrace();
+            } finally {
+                return classPath;
+            }
+
+        }
         return classPath;
     }
 

@@ -61,7 +61,7 @@ public class TaintAnalysis implements Plugin {
      * Map from method (which is source method) to set of types of
      * taint objects returned by the method calls.
      */
-    private final MultiMap<JMethod, Type> sources = Maps.newMultiMap();
+    private final MultiMap<JMethod, Integer> sources = Maps.newMultiMap();
 
     /**
      * Map from method (which causes taint transfer) to set of relevant
@@ -99,7 +99,7 @@ public class TaintAnalysis implements Plugin {
                 solver.getTypeSystem());
         logger.info(config);
         config.getSources().forEach(s ->
-                sources.put(s.method(), s.type()));
+                sources.put(s.method(), s.index()));
         config.getTransfers().forEach(t -> {
             transfers.put(t.method(), t);
         });
@@ -108,17 +108,17 @@ public class TaintAnalysis implements Plugin {
     public void onNewCSMethod(CSMethod csEntry) {
         if (!entryTaint)
             return;
-        entryTaint = false;
         JMethod entry = csEntry.getMethod();
         Context ctx = csEntry.getContext();
-        List<Var> params = entry.getIR().getParams();
-        for (int i = 0; i < 1; i++) {
+        sources.get(entry).forEach(i -> {
+            List<Var> params = entry.getIR().getParams();
             Var param = params.get(i);
             Type type = param.getType();
             Pointer pointer = csManager.getCSVar(ctx, param);
             Obj taint = manager.makeTaint(null, type, entry.getSignature()+ " begin");
             solver.addVarPointsTo(csEntry.getContext(), param, emptyContext, taint);
-        }
+            entryTaint = false;
+        });
     }
 
     @Override
@@ -126,15 +126,8 @@ public class TaintAnalysis implements Plugin {
         Invoke callSite = edge.getCallSite().getCallSite();
         JMethod caller = callSite.getMethodRef().resolve();
         Context ctx = edge.getCallSite().getContext();
+        String stmt = callSite.format();
         // generate taint value from source call
-//        Var lhs = callSite.getLValue();
-//        if (lhs != null && sources.containsKey(callee)) {
-//            sources.get(callee).forEach(type -> {
-//                Obj taint = manager.makeTaint(callSite, type);
-//                solver.addVarPointsTo(edge.getCallSite().getContext(), lhs,
-//                        emptyContext, taint);
-//            });
-//        }
         // process sinks
         config.getSinks().forEach(sink -> {
             if (caller == sink.method()) {
@@ -142,18 +135,32 @@ public class TaintAnalysis implements Plugin {
                 sinkInfo.put(sink.method(), var);
             }
         });
+        if (caller.getName().equals("<init>")) {
+            for (Var arg : callSite.getInvokeExp().getArgs()) {
+                CSVar csArg = csManager.getCSVar(ctx, arg);
+                PointsToSet pts = solver.getPointsToSetOf(csArg);
+                Var base = getVar(callSite, -1);
+                CSObj taint = pts.getTaint();
+                TaintTrans taintTrans = new TaintTrans(base.getType(), solver);
+                if (taint != null) {
+                    solver.addVarPointsTo(ctx, base, emptyContext, manager.makeTaint(taint.getObject(), base.getType(), stmt));
+                    taintTrans.setPropagate(false);
+                    break;
+                }
+                solver.addPFGEdge(csArg, csManager.getCSVar(ctx, base), PointerFlowEdge.Kind.TAINT, taintTrans);
+            }
+        }
         // process taint transfer
         transfers.get(caller).forEach(transfer -> {
             Var from = getVar(callSite, transfer.from());
             Var to = getVar(callSite, transfer.to());
-            String stmt = callSite.format();
+
             // when transfer to result variable, and the call site
             // does not have result variable, then "to" is null.
             if (to != null) {
                 Type type = transfer.type();
                 // propagate when csFrom contains taintObj
                 // another resolve: varTransfers.put(from, new ThreePair<>(to, type, stmt));
-//                Context ctx = edge.getCallSite().getContext();
                 CSVar csFrom = csManager.getCSVar(ctx, from);
                 PointsToSet pts = solver.getPointsToSetOf(csFrom);
                 CSObj taint = pts.getTaint();
@@ -211,10 +218,8 @@ public class TaintAnalysis implements Plugin {
             }
         });
         sinkInfo = sinkResult;
-//        long num = result.getObjects().stream().filter(manager::isTaint).count();
-//        System.out.printf("total %d taintObj\n", num);
-//        printTaint(result);
-        showRelation();
+        printTaint(result);
+//        showRelation();
         return taintFlows;
     }
 
@@ -268,24 +273,6 @@ class NeoGraph implements AutoCloseable {
     @Override
     public void close() throws RuntimeException {
         driver.close();
-    }
-
-    private String handle1(String info) {
-        String[] des = info.split(":");
-        if (des.length == 2) {
-            var query = new Query("MERGE (r:Class {name:$class}) MERGE(s:Field {name:$field}) MERGE (r)-[:hasField]->(s)",
-                    parameters("class", des[0], "field", des[1]));
-            session.run(query);
-            return String.format("Field {name:\"%s\"}", des[1]);
-        } else {
-            var query = new Query("MERGE (r:Class {name:$class}) MERGE(s:Method {name:$method}) MERGE (r)-[:hasMethod]->(s)",
-                    parameters("class", des[0], "method", des[1]));
-            session.run(query);
-            var query1 = new Query("MERGE (r:Method {name:$method}) MERGE(s:Var {name:$var}) MERGE (r)-[:hasVar]->(s)",
-                    parameters("method", des[1], "var", des[2]));
-            session.run(query1);
-            return String.format("Var {name:\"%s\"}", des[2]);
-        }
     }
 
     private String handle(String info) {

@@ -181,9 +181,8 @@ class TaintConfig {
                     if (method != null) {
                         // if the method (given in config file) is absent in
                         // the class hierarchy, just ignore it.
-                        Type type = typeSystem.getType(
-                                elem.get("type").asText());
-                        sources.add(new Source(method, type));
+                        int index = elem.get("index").asInt();
+                        sources.add(new Source(method, index));
                     } else {
                         logger.warn("Cannot find source method '{}'", methodSig);
                     }

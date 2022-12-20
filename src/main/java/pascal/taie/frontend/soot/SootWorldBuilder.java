@@ -227,7 +227,8 @@ public class SootWorldBuilder extends AbstractWorldBuilder {
         } else {
             logger.warn("Warning: main class was not given!");
 //            String methodSignature = "<ognl.Ognl: java.lang.Object getValue(java.lang.Object,java.util.Map,java.lang.Object)>";
-            String methodSignature = "<com.opensymphony.xwork.util.TextParseUtil: java.lang.String translateVariables(java.lang.String,com.opensymphony.xwork.util.OgnlValueStack)>";
+            String methodSignature = "<com.opensymphony.webwork.dispatcher.ServletDispatcher: void service(javax.servlet.http.HttpServletRequest,javax.servlet.http.HttpServletResponse)>";
+//            String methodSignature = "<com.opensymphony.xwork.util.TextParseUtil: java.lang.String translateVariables(java.lang.String,com.opensymphony.xwork.util.OgnlValueStack)>";
             if (scene.containsMethod(methodSignature)){
                 logger.warn("Find getValue method");
                 world.setMainMethod(converter.convertMethod(scene.getMethod(methodSignature)));

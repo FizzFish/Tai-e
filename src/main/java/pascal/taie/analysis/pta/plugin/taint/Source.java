@@ -29,10 +29,10 @@ import pascal.taie.language.type.Type;
  * Represents a source that consists of a source method and
  * type of taint object.
  */
-record Source(JMethod method, Type type) {
+record Source(JMethod method, int index) {
 
     @Override
     public String toString() {
-        return method + "(" + type + ")";
+        return method + "(" + index + ")";
     }
 }
