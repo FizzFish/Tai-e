@@ -37,6 +37,11 @@ public class TaintObj extends Obj{
         return type;
     }
 
+    @Override
+    public boolean isPolymorphism() {
+        return true;
+    }
+
     public String toString() {
         TaintObj cur = this;
         String out = "";

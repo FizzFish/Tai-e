@@ -25,6 +25,8 @@ package pascal.taie.analysis.graph.callgraph;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import pascal.taie.World;
+import pascal.taie.analysis.pta.core.heap.Obj;
+import pascal.taie.analysis.pta.core.heap.TaintObj;
 import pascal.taie.config.Configs;
 import pascal.taie.ir.IRPrinter;
 import pascal.taie.ir.exp.InvokeDynamic;
@@ -39,6 +41,7 @@ import pascal.taie.language.classes.ClassHierarchy;
 import pascal.taie.language.classes.JClass;
 import pascal.taie.language.classes.JMethod;
 import pascal.taie.language.classes.Subsignature;
+import pascal.taie.language.type.ClassType;
 import pascal.taie.language.type.Type;
 import pascal.taie.util.AnalysisException;
 import pascal.taie.util.Indexer;
@@ -84,10 +87,13 @@ public final class CallGraphs {
         return getCallKind(invoke.getInvokeExp());
     }
 
-    public static Set<JMethod> resolve(Invoke callSite) {
+    public static Set<JMethod> resolve(Type type, Invoke callSite) {
         Set<JMethod> methods = new HashSet();
         if (callSite.isDynamic()) return methods;
         MethodRef methodRef = callSite.getMethodRef();
+        Subsignature subsignature = methodRef.getSubsignature();
+//        if (type instanceof ClassType == false) return methods;
+//        JClass jclass = ((ClassType) type).getJClass();
         JClass jclass = methodRef.getDeclaringClass();
         ClassHierarchy hierarchy = World.get().getClassHierarchy();
 
@@ -97,7 +103,7 @@ public final class CallGraphs {
             hierarchy.getDirectImplementorsOf(jclass).forEach(subClasses::add);
         else if (callSite.isVirtual())
             hierarchy.getDirectSubclassesOf(jclass).forEach(subClasses::add);
-        Subsignature subsignature = methodRef.getSubsignature();
+
         for (JClass subclass : subClasses) {
             JMethod method = subclass.getDeclaredMethod(subsignature);
             if (method != null && !method.isAbstract())

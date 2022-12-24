@@ -62,6 +62,14 @@ public class Invoke extends DefinitionStmt<Var, InvokeExp>
      * The method containing this statement.
      */
     private final JMethod container;
+    private boolean resolved = false;
+
+    public void setResolved() {
+        resolved = true;
+    }
+    public boolean isResolved() {
+        return resolved;
+    }
 
     public Invoke(JMethod method, InvokeExp invokeExp, @Nullable Var result) {
         this.invokeExp = invokeExp;
@@ -69,10 +77,10 @@ public class Invoke extends DefinitionStmt<Var, InvokeExp>
         if (invokeExp instanceof InvokeInstanceExp) {
             Var base = ((InvokeInstanceExp) invokeExp).getBase();
             base.addInvoke(this);
+            invokeExp.getArgs().forEach(arg -> {
+                arg.addArgInvoke(this);
+            });
         }
-        invokeExp.getArgs().forEach(arg -> {
-            arg.addArgInvoke(this);
-        });
         this.container = method;
     }
 

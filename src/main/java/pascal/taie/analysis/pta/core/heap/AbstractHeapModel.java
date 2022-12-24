@@ -170,6 +170,11 @@ public abstract class AbstractHeapModel implements HeapModel {
         add(taintObj);
         return taintObj;
     }
+    public GenObj getGenObj(Stmt stmt, Type type) {
+        GenObj genObj = new GenObj(stmt, type);
+        add(genObj);
+        return genObj;
+    }
 
     /**
      * Adds an obj to this model. This method also sets index for given obj.
