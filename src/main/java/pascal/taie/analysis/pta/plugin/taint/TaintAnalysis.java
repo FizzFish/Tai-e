@@ -110,7 +110,11 @@ public class TaintAnalysis implements Plugin {
             return;
         JMethod entry = csEntry.getMethod();
         Context ctx = csEntry.getContext();
-        sources.get(entry).forEach(i -> {
+
+        for (int i : sources.get(entry)) {
+            Var thisVar = entry.getIR().getThis();
+            Obj genThis = manager.makeGen(null, thisVar.getType());
+            solver.addVarPointsTo(csEntry.getContext(), thisVar, emptyContext, genThis);
             List<Var> params = entry.getIR().getParams();
             Var param = params.get(i);
             Type type = param.getType();
@@ -118,7 +122,7 @@ public class TaintAnalysis implements Plugin {
             Obj taint = manager.makeTaint(null, type, entry.getSignature()+ " begin");
             solver.addVarPointsTo(csEntry.getContext(), param, emptyContext, taint);
             entryTaint = false;
-        });
+        }
     }
 
     @Override
@@ -135,21 +139,21 @@ public class TaintAnalysis implements Plugin {
                 sinkInfo.put(sink.method(), var);
             }
         });
-        if (caller.getName().equals("<init>")) {
-            for (Var arg : callSite.getInvokeExp().getArgs()) {
-                CSVar csArg = csManager.getCSVar(ctx, arg);
-                PointsToSet pts = solver.getPointsToSetOf(csArg);
-                Var base = getVar(callSite, -1);
-                CSObj taint = pts.getTaint();
-                TaintTrans taintTrans = new TaintTrans(base.getType(), solver);
-                if (taint != null) {
-                    solver.addVarPointsTo(ctx, base, emptyContext, manager.makeTaint(taint.getObject(), base.getType(), stmt));
-                    taintTrans.setPropagate(false);
-                    break;
-                }
-                solver.addPFGEdge(csArg, csManager.getCSVar(ctx, base), PointerFlowEdge.Kind.TAINT, taintTrans);
-            }
-        }
+//        if (caller.getName().equals("<init>")) {
+//            for (Var arg : callSite.getInvokeExp().getArgs()) {
+//                CSVar csArg = csManager.getCSVar(ctx, arg);
+//                PointsToSet pts = solver.getPointsToSetOf(csArg);
+//                Var base = getVar(callSite, -1);
+//                CSObj taint = pts.getTaint();
+//                TaintTrans taintTrans = new TaintTrans(base.getType(), solver);
+//                if (taint != null) {
+//                    solver.addVarPointsTo(ctx, base, emptyContext, manager.makeTaint(taint.getObject(), base.getType(), stmt));
+//                    taintTrans.setPropagate(false);
+//                    break;
+//                }
+//                solver.addPFGEdge(csArg, csManager.getCSVar(ctx, base), PointerFlowEdge.Kind.TAINT, taintTrans);
+//            }
+//        }
         // process taint transfer
         transfers.get(caller).forEach(transfer -> {
             Var from = getVar(callSite, transfer.from());

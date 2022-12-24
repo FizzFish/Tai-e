@@ -23,10 +23,7 @@
 package pascal.taie.analysis.pta.plugin.taint;
 
 import pascal.taie.analysis.pta.core.cs.element.Pointer;
-import pascal.taie.analysis.pta.core.heap.HeapModel;
-import pascal.taie.analysis.pta.core.heap.MockObj;
-import pascal.taie.analysis.pta.core.heap.Obj;
-import pascal.taie.analysis.pta.core.heap.TaintObj;
+import pascal.taie.analysis.pta.core.heap.*;
 import pascal.taie.ir.stmt.Invoke;
 import pascal.taie.ir.stmt.Stmt;
 import pascal.taie.language.classes.JMethod;
@@ -59,6 +56,9 @@ class TaintManager {
 
     TaintObj makeTaint(Obj parent, Type type, String stmt) {
         return heapModel.getTaintObj(parent, type, stmt);
+    }
+    GenObj makeGen(Stmt stmt, Type type) {
+        return heapModel.getGenObj(stmt, type);
     }
 
     /**
