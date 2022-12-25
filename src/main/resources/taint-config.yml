@@ -1,0 +1,18 @@
+sources:
+  - { method: "<com.opensymphony.webwork.dispatcher.ServletDispatcher: void service(javax.servlet.http.HttpServletRequest,javax.servlet.http.HttpServletResponse)>", index: 0 }
+sinks:
+  - { method: "<java.lang.reflect.Method: java.lang.Object invoke(java.lang.Object,java.lang.Object[])>", index: -1 }
+
+transfers:
+  - { method: "<java.lang.String: java.lang.String concat(java.lang.String)>", from: base, to: result, type: "java.lang.String" }
+  - { method: "<java.lang.String: java.lang.String concat(java.lang.String)>", from: 0, to: result, type: "java.lang.String" }
+  - { method: "<java.lang.String: int lastIndexOf(java.lang.String)>", from: base, to: result, type: "int" }
+  - { method: "<java.lang.String: java.lang.String substring(int,int)>", from: 1, to: result, type: "java.lang.String" }
+  - { method: "<java.lang.StringBuilder: java.lang.StringBuilder append(java.lang.String)>", from: 0, to: result, type: "java.lang.String" }
+  - { method: "<java.lang.Class: java.lang.Class forName(java.lang.String)>", from: 0, to: result, type: "java.lang.Class" }
+  - { method: "<java.util.Map: java.lang.Object get(java.lang.Object)>", from: 0, to: result, type: "java.lang.Object" }
+  - { method: "<java.util.List: java.lang.Object get(int)>", from: base, to: result, type: "java.lang.Object" }
+  - { method: "<java.lang.Class: java.lang.reflect.Field getField(java.lang.String)>", from: base, to: result, type: "java.lang.reflect.Field" }
+  - { method: "<java.util.regex.Pattern: java.util.regex.Matcher matcher(java.lang.CharSequence)>", from: 0, to: result, type: "java.util.regex.Matcher" }
+  - { method: "<java.util.regex.Matcher: java.lang.String group(int)>", from: base, to: result, type: "java.lang.String" }
+  - { method: "<javax.servlet.http.HttpServletRequest: java.lang.String getServletPath()>", from: base, to: result, type: "java.lang.String" }
