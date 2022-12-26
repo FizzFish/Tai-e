@@ -222,8 +222,8 @@ public class TaintAnalysis implements Plugin {
             }
         });
         sinkInfo = sinkResult;
-        printTaint(result);
-//        showRelation();
+//        printTaint(result);
+        showRelation();
         return taintFlows;
     }
 
@@ -231,10 +231,10 @@ public class TaintAnalysis implements Plugin {
         var graph = new NeoGraph("bolt://localhost:7687", "neo4j", "password");
         solver.getPFG().getPointers().forEach(p -> {
             p.getOutEdges().forEach(e -> {
-                if (e.getTransfer().hasTaint() && e.getSource() != e.getTarget()) {
+//                if (e.getTransfer().hasTaint() && e.getSource() != e.getTarget()) {
 //                    System.out.println(e.format());
                     graph.addRelation(e);
-                }
+//                }
             });
         });
         sinkInfo.forEach((sink, var) -> {
@@ -300,10 +300,12 @@ class NeoGraph implements AutoCloseable {
     public void addRelation(PointerFlowEdge edge) {
         PointerFlowEdge.Kind kind = edge.getKind();
         if (EnumSet.of(PARAMETER_PASSING, RETURN, CALL, TAINT).contains(kind)){
-            String src = edge.getSource().format();
-            String target = edge.getTarget().format();
-            var query = new Query(String.format("MERGE (r:%s) MERGE (s:%s) MERGE (r)-[:%s]->(s)", handle(src), handle(target), kind));
-            session.run(query);
+            String src = handle(edge.getSource().format());
+            String target = handle(edge.getTarget().format());
+            if (!src.substring(src.indexOf('{')).equals(target.substring(src.indexOf('{')))) {
+                var query = new Query(String.format("MERGE (r:%s) MERGE (s:%s) MERGE (r)-[:%s]->(s)", src, target, kind));
+                session.run(query);
+            }
         }
     }
 

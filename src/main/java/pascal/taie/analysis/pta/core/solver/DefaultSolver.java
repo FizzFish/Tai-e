@@ -621,7 +621,15 @@ public class DefaultSolver implements Solver {
                     Context calleeCtx = contextSelector.selectContext(csCallSite, callee);
                     CSMethod csCallee = csManager.getCSMethod(calleeCtx, callee);
                     addCallEdge(new Edge<>(CallKind.STATIC, csCallSite, csCallee));
+                    // genObj is callee is JDK method
+                    Var lhs = callSite.getResult();
+                    if (lhs != null && isConcerned(lhs) && isIgnored(callee)) {
+                        Obj obj = heapModel.getGenObj(callSite, lhs.getType());
+                        Context heapContext = contextSelector.selectHeapContext(csMethod, obj);
+                        addVarPointsTo(context, lhs, heapContext, obj);
+                    }
                 }
+
             }
 
             @Override

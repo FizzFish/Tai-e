@@ -7,9 +7,10 @@ transfers:
   - { method: "<java.lang.String: java.lang.String concat(java.lang.String)>", from: base, to: result, type: "java.lang.String" }
   - { method: "<java.lang.String: java.lang.String concat(java.lang.String)>", from: 0, to: result, type: "java.lang.String" }
   - { method: "<java.lang.String: int lastIndexOf(java.lang.String)>", from: base, to: result, type: "int" }
-  - { method: "<java.lang.String: java.lang.String substring(int,int)>", from: 1, to: result, type: "java.lang.String" }
+  - { method: "<java.lang.String: java.lang.String substring(int,int)>", from: base, to: result, type: "java.lang.String" }
   - { method: "<java.lang.StringBuilder: java.lang.StringBuilder append(java.lang.String)>", from: 0, to: result, type: "java.lang.String" }
   - { method: "<java.lang.Class: java.lang.Class forName(java.lang.String)>", from: 0, to: result, type: "java.lang.Class" }
+  - { method: "<java.lang.Class: java.lang.Object newInstance()>", from: base, to: result, type: "java.lang.Object" }
   - { method: "<java.util.Map: java.lang.Object get(java.lang.Object)>", from: 0, to: result, type: "java.lang.Object" }
   - { method: "<java.util.List: java.lang.Object get(int)>", from: base, to: result, type: "java.lang.Object" }
   - { method: "<java.lang.Class: java.lang.reflect.Field getField(java.lang.String)>", from: base, to: result, type: "java.lang.reflect.Field" }
