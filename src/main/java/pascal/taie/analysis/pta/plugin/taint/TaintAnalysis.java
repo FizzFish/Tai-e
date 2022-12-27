@@ -38,6 +38,7 @@ import pascal.taie.ir.IRPrinter;
 import pascal.taie.ir.exp.InvokeExp;
 import pascal.taie.ir.exp.InvokeInstanceExp;
 import pascal.taie.ir.exp.Var;
+import pascal.taie.ir.proginfo.MethodResolutionFailedException;
 import pascal.taie.ir.stmt.Invoke;
 import pascal.taie.language.classes.JField;
 import pascal.taie.language.classes.JMethod;
@@ -67,7 +68,7 @@ public class TaintAnalysis implements Plugin {
      * Map from method (which causes taint transfer) to set of relevant
      * {@link TaintTransfer}.
      */
-    private final MultiMap<JMethod, TaintTransfer> transfers = Maps.newMultiMap();
+    private final MultiMap<String, TaintTransfer> transfers = Maps.newMultiMap();
 
     /**
      * Map from variable to taint transfer information.
@@ -129,8 +130,6 @@ public class TaintAnalysis implements Plugin {
     public void onNewCallEdge(Edge<CSCallSite, CSMethod> edge) {
         Invoke callSite = edge.getCallSite().getCallSite();
         JMethod caller = callSite.getMethodRef().resolve();
-        Context ctx = edge.getCallSite().getContext();
-        String stmt = callSite.format();
         // generate taint value from source call
         // process sinks
         config.getSinks().forEach(sink -> {
@@ -154,6 +153,11 @@ public class TaintAnalysis implements Plugin {
 //                solver.addPFGEdge(csArg, csManager.getCSVar(ctx, base), PointerFlowEdge.Kind.TAINT, taintTrans);
 //            }
 //        }
+
+    }
+    public void onNewCallSite(CSCallSite csCallSite) {
+        Invoke callSite = csCallSite.getCallSite();
+        String caller = callSite.getMethodRef().toString();
         // process taint transfer
         transfers.get(caller).forEach(transfer -> {
             Var from = getVar(callSite, transfer.from());
@@ -163,6 +167,8 @@ public class TaintAnalysis implements Plugin {
             // does not have result variable, then "to" is null.
             if (to != null) {
                 Type type = transfer.type();
+                Context ctx = csCallSite.getContext();
+                String stmt = callSite.format();
                 // propagate when csFrom contains taintObj
                 // another resolve: varTransfers.put(from, new ThreePair<>(to, type, stmt));
                 CSVar csFrom = csManager.getCSVar(ctx, from);
@@ -177,7 +183,6 @@ public class TaintAnalysis implements Plugin {
             }
         });
     }
-
     @Override
     public void onNewPointsToSet(CSVar csVar, PointsToSet pts) {
 //        CSObj taint = pts.getTaint();
@@ -222,8 +227,8 @@ public class TaintAnalysis implements Plugin {
             }
         });
         sinkInfo = sinkResult;
-//        printTaint(result);
-        showRelation();
+        printTaint(result);
+//        showRelation();
         return taintFlows;
     }
 
@@ -231,10 +236,10 @@ public class TaintAnalysis implements Plugin {
         var graph = new NeoGraph("bolt://localhost:7687", "neo4j", "password");
         solver.getPFG().getPointers().forEach(p -> {
             p.getOutEdges().forEach(e -> {
-//                if (e.getTransfer().hasTaint() && e.getSource() != e.getTarget()) {
+                if (e.getTransfer().hasTaint() && e.getSource() != e.getTarget()) {
 //                    System.out.println(e.format());
                     graph.addRelation(e);
-//                }
+                }
             });
         });
         sinkInfo.forEach((sink, var) -> {
@@ -299,14 +304,14 @@ class NeoGraph implements AutoCloseable {
     }
     public void addRelation(PointerFlowEdge edge) {
         PointerFlowEdge.Kind kind = edge.getKind();
-        if (EnumSet.of(PARAMETER_PASSING, RETURN, CALL, TAINT).contains(kind)){
+//        if (EnumSet.of(PARAMETER_PASSING, RETURN, CALL, TAINT).contains(kind)){
             String src = handle(edge.getSource().format());
             String target = handle(edge.getTarget().format());
             if (!src.substring(src.indexOf('{')).equals(target.substring(src.indexOf('{')))) {
                 var query = new Query(String.format("MERGE (r:%s) MERGE (s:%s) MERGE (r)-[:%s]->(s)", src, target, kind));
                 session.run(query);
             }
-        }
+//        }
     }
 
     public void addRelation(Var var, JMethod sink) {

@@ -93,8 +93,8 @@ public final class CallGraphs {
         MethodRef methodRef = callSite.getMethodRef();
         Subsignature subsignature = methodRef.getSubsignature();
 //        if (type instanceof ClassType == false) return methods;
-//        JClass jclass = ((ClassType) type).getJClass();
-        JClass jclass = methodRef.getDeclaringClass();
+        JClass jclass = ((ClassType) type).getJClass();
+//        JClass jclass = methodRef.getDeclaringClass();
         ClassHierarchy hierarchy = World.get().getClassHierarchy();
 
         Set<JClass> subClasses = new HashSet<>();

@@ -235,15 +235,15 @@ class TaintConfig {
                 Set<TaintTransfer> transfers = Sets.newSet(arrayNode.size());
                 for (JsonNode elem : arrayNode) {
                     String methodSig = elem.get("method").asText();
-                    JMethod method = hierarchy.getMethod(methodSig);
-                    if (method != null) {
+//                    JMethod method = hierarchy.getMethod(methodSig);
+                    if (methodSig != null) {
                         // if the method (given in config file) is absent in
                         // the class hierarchy, just ignore it.
                         int from = TaintTransfer.toInt(elem.get("from").asText());
                         int to = TaintTransfer.toInt(elem.get("to").asText());
                         Type type = typeSystem.getType(
                                 elem.get("type").asText());
-                        transfers.add(new TaintTransfer(method, from, to, type));
+                        transfers.add(new TaintTransfer(methodSig, from, to, type));
                     } else {
                         logger.warn("Cannot find taint-transfer method '{}'", methodSig);
                     }

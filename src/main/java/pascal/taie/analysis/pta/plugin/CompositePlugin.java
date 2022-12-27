@@ -57,6 +57,7 @@ public class CompositePlugin implements Plugin {
     private final List<Plugin> onNewCSMethodPlugins = new ArrayList<>();
 
     private final List<Plugin> onUnresolvedCallPlugins = new ArrayList<>();
+    private final List<Plugin> onNewCallSitePlugins = new ArrayList<>();
 
     public void addPlugin(Plugin... plugins) {
         for (Plugin plugin : plugins) {
@@ -65,6 +66,7 @@ public class CompositePlugin implements Plugin {
                     "onNewPointsToSet", CSVar.class, PointsToSet.class);
             addPlugin(plugin, onNewCallEdgePlugins, "onNewCallEdge", Edge.class);
             addPlugin(plugin, onNewMethodPlugins, "onNewMethod", JMethod.class);
+            addPlugin(plugin, onNewCallSitePlugins, "onNewCallSite", CSCallSite.class);
             addPlugin(plugin, onNewCSMethodPlugins, "onNewCSMethod", CSMethod.class);
             addPlugin(plugin, onUnresolvedCallPlugins,
                     "onUnresolvedCall", CSObj.class, Context.class, Invoke.class);
@@ -123,5 +125,9 @@ public class CompositePlugin implements Plugin {
     @Override
     public void onUnresolvedCall(CSObj recv, Context context, Invoke invoke) {
         onUnresolvedCallPlugins.forEach(p -> p.onUnresolvedCall(recv, context, invoke));
+    }
+
+    public void onNewCallSite(CSCallSite csCallSite) {
+        onNewCallSitePlugins.forEach(p -> p.onNewCallSite(csCallSite));
     }
 }

@@ -97,7 +97,7 @@ public interface Plugin {
     default void onNewCSMethod(CSMethod csMethod) {
     }
 
-    default void onJDKCSCallSite(CSCallSite csCallSite) {
+    default void onNewCallSite(CSCallSite csCallSite) {
     }
     /**
      * Invoked when pointer analysis failed to resolve callee (i.e., resolve

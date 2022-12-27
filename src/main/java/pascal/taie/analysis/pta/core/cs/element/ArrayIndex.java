@@ -22,6 +22,7 @@
 
 package pascal.taie.analysis.pta.core.cs.element;
 
+import pascal.taie.language.classes.JMethod;
 import pascal.taie.language.type.ArrayType;
 import pascal.taie.language.type.Type;
 
@@ -52,7 +53,8 @@ public class ArrayIndex extends AbstractPointer {
 
     @Override
     public String format() {
-        return "array";
+        JMethod method = array.getObject().getContainerMethod().get();
+        return String.format("%s:%s_arr", method.getDeclaringClass(), method.getName());
     }
 
     @Override

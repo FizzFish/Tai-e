@@ -114,6 +114,7 @@ public class DefaultSolver implements Solver {
     private PointerFlowGraph pointerFlowGraph;
 
     private Set<JMethod> reachableMethods;
+    private Set<CSCallSite> reachableCallSite;
 
     /**
      * Set of classes that have been initialized.
@@ -220,6 +221,7 @@ public class DefaultSolver implements Solver {
         pointerFlowGraph = new PointerFlowGraph();
         workList = new WorkList();
         reachableMethods = Sets.newSet();
+        reachableCallSite = Sets.newSet();
         initializedClasses = Sets.newSet();
         ignoredMethods = Sets.newSet();
         stmtProcessor = new StmtProcessor();
@@ -319,7 +321,7 @@ public class DefaultSolver implements Solver {
             }
         }
     }
-    boolean isBasicField(JField filed) {
+    private boolean isBasicField(JField filed) {
         Type type = filed.getType();
         String typeName = type.getName();
         if (PrimitiveType.isPrimitiveType(typeName))
@@ -344,6 +346,7 @@ public class DefaultSolver implements Solver {
             if (isConcerned(rvalue)) {
                 CSVar from = csManager.getCSVar(context, rvalue);
                 pts.forEach(array -> {
+                    // arr[i] = y  arr need be ArrayType kind
                     if (array.getObject() instanceof TaintObj == false) {
                         // donot transfer taint obj to array
                         ArrayIndex arrayIndex = csManager.getArrayIndex(array);
@@ -405,7 +408,7 @@ public class DefaultSolver implements Solver {
                         CSVar csBase = csManager.getCSVar(context, base);
                         addVarPointsTo(calleeContext, thisVar, context, obj);
 //                    Transfer callTransfer = new CallTransfer(true);
-                        addPFGEdge(csBase, CSThis, PointerFlowEdge.Kind.CALL);
+                        addPFGEdge(csBase, CSThis, PointerFlowEdge.Kind.PARAMETER_PASSING);
                     }
                 });
             }
@@ -422,41 +425,45 @@ public class DefaultSolver implements Solver {
         Context context = recv.getContext();
         Var var = recv.getVar();
         for (Invoke callSite : var.getInvokes()) {
-            pts.forEach(recvObj -> {
-                Obj obj = recvObj.getObject();
-                Type type = obj.getType();
-                Set<JMethod> methods = new HashSet<>();
+            if(!callSite.isResolved()) {
+                pts.forEach(recvObj -> {
+                    Obj obj = recvObj.getObject();
+                    Type type = obj.getType();
+                    Set<JMethod> methods = new HashSet<>();
 
-                if (!obj.isPolymorphism()) {
-                    // resolve callee
-                    methods.add(CallGraphs.resolveCallee(type, callSite));
-                } else if (obj.isPolymorphism()) {
-                    methods = CallGraphs.resolve(type, callSite);
-                }
-                if (methods.isEmpty())
-                    plugin.onUnresolvedCall(recvObj, context, callSite);
-                methods.forEach(callee -> {
-                    if (callee != null) {
-                        // select context
-                        CSCallSite csCallSite = csManager.getCSCallSite(context, callSite);
-                        Context calleeContext = contextSelector.selectContext(
-                                csCallSite, recvObj, callee);
-                        // build call edge
-                        CSMethod csCallee = csManager.getCSMethod(calleeContext, callee);
-                        addCallEdge(new Edge<>(CallGraphs.getCallKind(callSite),
-                                csCallSite, csCallee));
-                        // pass receiver object to *this* variable
-                        if (!isIgnored(callee)) {
-                            Var thisVar = callee.getIR().getThis();
-                            CSVar CSThis = csManager.getCSVar(calleeContext, thisVar);
-                            addVarPointsTo(calleeContext, thisVar, recvObj);
-                            Transfer callTransfer = new CallTransfer(recvObj.getObject() instanceof TaintObj);
-                            addPFGEdge(recv, CSThis, PointerFlowEdge.Kind.CALL, callTransfer);
-                        }
-                        callSite.setResolved();
+                    if (!(obj instanceof TaintObj)) {
+                        // resolve callee
+                        methods.add(CallGraphs.resolveCallee(type, callSite));
+                    } else {// if (obj instanceof TaintObj) {
+                        // taintObj
+                        methods = CallGraphs.resolve(var.getType(), callSite);
                     }
+                    processNewCSInvoke(csManager.getCSCallSite(context, callSite));
+                    if (methods.isEmpty())
+                        plugin.onUnresolvedCall(recvObj, context, callSite);
+                    methods.forEach(callee -> {
+                        if (callee != null) {
+                            // select context
+                            CSCallSite csCallSite = csManager.getCSCallSite(context, callSite);
+                            Context calleeContext = contextSelector.selectContext(
+                                    csCallSite, recvObj, callee);
+                            // build call edge
+                            CSMethod csCallee = csManager.getCSMethod(calleeContext, callee);
+                            addCallEdge(new Edge<>(CallGraphs.getCallKind(callSite),
+                                    csCallSite, csCallee));
+                            // pass receiver object to *this* variable
+                            if (!isIgnored(callee)) {
+                                Var thisVar = callee.getIR().getThis();
+                                CSVar CSThis = csManager.getCSVar(calleeContext, thisVar);
+                                addVarPointsTo(calleeContext, thisVar, recvObj);
+                                Transfer callTransfer = new CallTransfer(recvObj.getObject() instanceof TaintObj);
+                                addPFGEdge(recv, CSThis, PointerFlowEdge.Kind.PARAMETER_PASSING, callTransfer);
+                            }
+                            callSite.setResolved();
+                        }
+                    });
                 });
-            });
+            }
         }
     }
 
@@ -510,6 +517,14 @@ public class DefaultSolver implements Solver {
         if (reachableMethods.add(method)) {
             plugin.onNewMethod(method);
         }
+    }
+
+    private void processNewCSInvoke(CSCallSite csCallSite) {
+//        CSCallSite csCallSite = csManager.getCSCallSite(context, callSite);
+        if (reachableCallSite.contains(csCallSite))
+            reachableCallSite.add(csCallSite);
+        else
+            plugin.onNewCallSite(csCallSite);
     }
 
     /**
@@ -626,6 +641,7 @@ public class DefaultSolver implements Solver {
                 JMethod callee = CallGraphs.resolveCallee(null, callSite);
                 if (callee != null) {
                     CSCallSite csCallSite = csManager.getCSCallSite(context, callSite);
+                    processNewCSInvoke(csCallSite);
                     Context calleeCtx = contextSelector.selectContext(csCallSite, callee);
                     CSMethod csCallee = csManager.getCSMethod(calleeCtx, callee);
                     addCallEdge(new Edge<>(CallKind.STATIC, csCallSite, csCallee));
