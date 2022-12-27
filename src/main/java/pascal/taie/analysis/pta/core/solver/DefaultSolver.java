@@ -309,10 +309,8 @@ public class DefaultSolver implements Solver {
                 CSVar to = csManager.getCSVar(context, toVar);
                 pts.forEach(baseObj -> {
                     Obj obj = baseObj.getObject();
-                    if (obj instanceof TaintObj) {
-                        PointsToSet taintPTS = makePointsToSet();
-                        taintPTS.addObject(baseObj);
-                        addPointsTo(to, taintPTS);
+                    if (obj instanceof TaintObj && isBasicField(field)) {
+                        addPointsTo(to, baseObj);
                     }
                     InstanceField instField = csManager.getInstanceField(
                             baseObj, field);
@@ -320,6 +318,16 @@ public class DefaultSolver implements Solver {
                 });
             }
         }
+    }
+    boolean isBasicField(JField filed) {
+        Type type = filed.getType();
+        String typeName = type.getName();
+        if (PrimitiveType.isPrimitiveType(typeName))
+            return true;
+        // java.lang.String, java.util.List/Map
+        if (typeName.startsWith("java.lang") || typeName.startsWith("java.util"))
+            return true;
+        return false;
     }
 
     /**
