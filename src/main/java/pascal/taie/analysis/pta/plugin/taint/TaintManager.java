@@ -33,7 +33,7 @@ import pascal.taie.util.AnalysisException;
 /**
  * Manages taint objects.
  */
-class TaintManager {
+public class TaintManager {
 
     private static final String TAINT_DESC = "TaintObj";
 
@@ -54,7 +54,7 @@ class TaintManager {
         return heapModel.getMockObj(TAINT_DESC, source, type);
     }
 
-    TaintObj makeTaint(Obj parent, Type type, String stmt) {
+    public TaintObj makeTaint(Obj parent, Type type, String stmt) {
         return heapModel.getTaintObj(parent, type, stmt);
     }
     GenObj makeGen(Stmt stmt, Type type) {
@@ -65,9 +65,10 @@ class TaintManager {
      * @return true if given obj represents a taint object, otherwise false.
      */
     boolean isTaint(Obj obj) {
-        return obj instanceof TaintObj;
-//        return obj instanceof MockObj &&
-//                ((MockObj) obj).getDescription().equals(TAINT_DESC);
+        if (obj instanceof TaintObj taintObj) {
+            return taintObj.isRealTaint();
+        }
+        return false;
     }
 
     /**

@@ -241,9 +241,12 @@ class TaintConfig {
                         // the class hierarchy, just ignore it.
                         int from = TaintTransfer.toInt(elem.get("from").asText());
                         int to = TaintTransfer.toInt(elem.get("to").asText());
-                        Type type = typeSystem.getType(
-                                elem.get("type").asText());
-                        transfers.add(new TaintTransfer(method, from, to, type));
+//                        Type type = typeSystem.getType(
+                        String kind = elem.get("type").asText();
+//                        Type returnType = method.getReturnType();
+                        if (!kind.equals("config"))
+                            kind = "taint";
+                        transfers.add(new TaintTransfer(method, from, to, kind));
                     } else {
                         logger.warn("Cannot find taint-transfer method '{}'", methodSig);
                     }

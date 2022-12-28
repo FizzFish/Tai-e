@@ -24,23 +24,30 @@ package pascal.taie.analysis.pta.core.solver;
 
 import pascal.taie.analysis.pta.core.cs.element.CSObj;
 import pascal.taie.analysis.pta.core.heap.TaintObj;
+import pascal.taie.analysis.pta.plugin.taint.TaintManager;
 import pascal.taie.analysis.pta.pts.PointsToSet;
 import pascal.taie.language.type.Type;
 
 import java.util.function.Supplier;
 
 public class TaintTrans implements Transfer {
-
-    private final Supplier<PointsToSet> ptsFactory;
     private final Type type;
+    private final TaintManager manager;
+    private final String stmt;
+    private final Solver solver;
+    private final int kind;
     private boolean needPropagate;
-    public TaintTrans(Type type, Solver solver) {
+    public TaintTrans(Type type, Solver solver, TaintManager manager, String stmt, int kind) {
         this.type = type;
-        this.ptsFactory = solver::makePointsToSet;
+        this.solver = solver;
         this.needPropagate = true;
+        this.manager = manager;
+        this.stmt = stmt;
+        this.kind = kind;
     }
+
     public boolean hasTaint() {
-        return true;
+        return !needPropagate;
     }
     @Override
     public boolean needPropagate() {
@@ -52,11 +59,16 @@ public class TaintTrans implements Transfer {
 
     @Override
     public PointsToSet apply(PointerFlowEdge edge, PointsToSet input) {
-        PointsToSet result = ptsFactory.get();
-        for (CSObj csobj : input) {
-            if (csobj.getObject() instanceof TaintObj)
-                result.addObject(csobj);
+        PointsToSet result = solver.makePointsToSet();
+
+        CSObj taint = input.getTaint();
+        if (taint != null) {
+            TaintObj newTaint = manager.makeTaint(taint.getObject(), type, stmt);
+            newTaint.setKind(kind);
+            CSObj newObj = solver.getCSManager().getCSObj(taint.getContext(), newTaint);
+            result.addObject(newObj);
+            needPropagate = false;
         }
-        return input;
+        return result;
     }
 }

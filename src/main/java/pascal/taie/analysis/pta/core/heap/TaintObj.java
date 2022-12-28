@@ -11,6 +11,7 @@ public class TaintObj extends Obj{
     private final Type type;
     private String stmt;
     private JMethod container;
+    private int kind = 0;
 
     public TaintObj(Obj parent, Type type, String stmt) {
         this.type = type;
@@ -40,6 +41,13 @@ public class TaintObj extends Obj{
     @Override
     public boolean isPolymorphism() {
         return true;
+    }
+
+    public void setKind(int kind) {
+        this.kind = kind;
+    }
+    public boolean isRealTaint() {
+        return kind == 1;
     }
 
     public String toString() {
