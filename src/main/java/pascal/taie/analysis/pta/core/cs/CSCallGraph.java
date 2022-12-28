@@ -31,6 +31,7 @@ import pascal.taie.analysis.pta.core.cs.element.CSMethod;
 import pascal.taie.ir.stmt.Invoke;
 import pascal.taie.ir.stmt.Stmt;
 import pascal.taie.language.classes.JMethod;
+import pascal.taie.util.AnalysisException;
 import pascal.taie.util.collection.ArraySet;
 import pascal.taie.util.collection.IndexerBitSet;
 import pascal.taie.util.collection.Views;
@@ -107,13 +108,17 @@ public class CSCallGraph extends AbstractCallGraph<CSCallSite, CSMethod> {
         JMethod method = csMethod.getMethod();
         Context context = csMethod.getContext();
         ArrayList<CSCallSite> callSites = new ArrayList<>();
-        for (Stmt s : method.getIR()) {
-            if (s instanceof Invoke) {
-                CSCallSite csCallSite = csManager.getCSCallSite(context, (Invoke) s);
-                // each Invoke is iterated once, that we can ensure that
-                // callSites contain no duplicate Invokes
-                callSites.add(csCallSite);
+        try {
+            for (Stmt s : method.getIR()) {
+                if (s instanceof Invoke) {
+                    CSCallSite csCallSite = csManager.getCSCallSite(context, (Invoke) s);
+                    // each Invoke is iterated once, that we can ensure that
+                    // callSites contain no duplicate Invokes
+                    callSites.add(csCallSite);
+                }
             }
+        } catch (AnalysisException exc) {
+
         }
         return Collections.unmodifiableSet(new ArraySet<>(callSites, true));
     }

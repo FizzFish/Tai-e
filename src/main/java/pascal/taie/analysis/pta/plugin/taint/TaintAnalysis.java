@@ -68,7 +68,7 @@ public class TaintAnalysis implements Plugin {
      * Map from method (which causes taint transfer) to set of relevant
      * {@link TaintTransfer}.
      */
-    private final MultiMap<String, TaintTransfer> transfers = Maps.newMultiMap();
+    private final MultiMap<JMethod, TaintTransfer> transfers = Maps.newMultiMap();
 
     /**
      * Map from variable to taint transfer information.
@@ -130,6 +130,8 @@ public class TaintAnalysis implements Plugin {
     public void onNewCallEdge(Edge<CSCallSite, CSMethod> edge) {
         Invoke callSite = edge.getCallSite().getCallSite();
         JMethod caller = callSite.getMethodRef().resolve();
+        Context ctx = edge.getCallSite().getContext();
+        String stmt = callSite.format();
         // generate taint value from source call
         // process sinks
         config.getSinks().forEach(sink -> {
@@ -153,12 +155,6 @@ public class TaintAnalysis implements Plugin {
 //                solver.addPFGEdge(csArg, csManager.getCSVar(ctx, base), PointerFlowEdge.Kind.TAINT, taintTrans);
 //            }
 //        }
-
-    }
-    public void onNewCallSite(CSCallSite csCallSite) {
-        Invoke callSite = csCallSite.getCallSite();
-        String caller = callSite.getMethodRef().toString();
-        // process taint transfer
         transfers.get(caller).forEach(transfer -> {
             Var from = getVar(callSite, transfer.from());
             Var to = getVar(callSite, transfer.to());
@@ -167,8 +163,7 @@ public class TaintAnalysis implements Plugin {
             // does not have result variable, then "to" is null.
             if (to != null) {
                 Type type = transfer.type();
-                Context ctx = csCallSite.getContext();
-                String stmt = callSite.format();
+
                 // propagate when csFrom contains taintObj
                 // another resolve: varTransfers.put(from, new ThreePair<>(to, type, stmt));
                 CSVar csFrom = csManager.getCSVar(ctx, from);
@@ -182,6 +177,7 @@ public class TaintAnalysis implements Plugin {
                 solver.addPFGEdge(csFrom, csManager.getCSVar(ctx, to), PointerFlowEdge.Kind.TAINT, taintTrans);
             }
         });
+
     }
     @Override
     public void onNewPointsToSet(CSVar csVar, PointsToSet pts) {
@@ -227,7 +223,7 @@ public class TaintAnalysis implements Plugin {
             }
         });
         sinkInfo = sinkResult;
-        printTaint(result);
+//        printTaint(result);
 //        showRelation();
         return taintFlows;
     }

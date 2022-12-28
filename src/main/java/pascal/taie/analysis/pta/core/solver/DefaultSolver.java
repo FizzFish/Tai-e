@@ -431,14 +431,18 @@ public class DefaultSolver implements Solver {
                     Type type = obj.getType();
                     Set<JMethod> methods = new HashSet<>();
 
-                    if (!(obj instanceof TaintObj)) {
+                    if (!obj.isPolymorphism()) {
                         // resolve callee
                         methods.add(CallGraphs.resolveCallee(type, callSite));
-                    } else {// if (obj instanceof TaintObj) {
-                        // taintObj
-                        methods = CallGraphs.resolve(var.getType(), callSite);
+                    } else {
+                        MethodRef methodRef = callSite.getMethodRef();
+                        // taintObj polymorphism for application method
+                        if (methodRef.getDeclaringClass().isApplication())
+                            methods = CallGraphs.resolve(var.getType(), callSite);
+                        else
+                            methods.add(methodRef.resolve());
                     }
-                    processNewCSInvoke(csManager.getCSCallSite(context, callSite));
+//                    processNewCSInvoke(csManager.getCSCallSite(context, callSite));
                     if (methods.isEmpty())
                         plugin.onUnresolvedCall(recvObj, context, callSite);
                     methods.forEach(callee -> {
