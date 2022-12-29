@@ -61,11 +61,13 @@ public class TaintTrans implements Transfer {
     public PointsToSet apply(PointerFlowEdge edge, PointsToSet input) {
         PointsToSet result = solver.makePointsToSet();
 
-        CSObj taint = input.getTaint();
-        if (taint != null) {
-            TaintObj newTaint = manager.makeTaint(taint.getObject(), type, stmt);
-            newTaint.setKind(kind);
-            CSObj newObj = solver.getCSManager().getCSObj(taint.getContext(), newTaint);
+        CSObj csTaint = input.getTaint();
+        if (csTaint != null) {
+            TaintObj taint = (TaintObj) csTaint.getObject();
+            TaintObj newTaint = manager.makeTaint(taint, type, stmt);
+            if (taint.isRealTaint()) // may generate config taint object
+                newTaint.setKind(kind);
+            CSObj newObj = solver.getCSManager().getCSObj(csTaint.getContext(), newTaint);
             result.addObject(newObj);
             needPropagate = false;
         }

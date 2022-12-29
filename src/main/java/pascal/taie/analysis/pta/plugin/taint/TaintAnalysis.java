@@ -43,6 +43,7 @@ import pascal.taie.ir.stmt.Invoke;
 import pascal.taie.language.classes.JField;
 import pascal.taie.language.classes.JMethod;
 import pascal.taie.language.type.Type;
+import pascal.taie.language.type.VoidType;
 import pascal.taie.util.collection.Maps;
 import pascal.taie.util.collection.MultiMap;
 import pascal.taie.util.collection.Pair;
@@ -166,6 +167,9 @@ public class TaintAnalysis implements Plugin {
                 if (transfer.kind().equals("config"))
                     kind = 0;
                 Type returnType = caller.getReturnType();
+                if (returnType instanceof VoidType) {
+                    returnType = caller.getDeclaringClass().getType();
+                }
 
                 // propagate when csFrom contains taintObj
                 // another resolve: varTransfers.put(from, new ThreePair<>(to, type, stmt));
@@ -178,8 +182,8 @@ public class TaintAnalysis implements Plugin {
                     newTaint.setKind(kind);
                     solver.addVarPointsTo(ctx, to, emptyContext, newTaint);
                     taintTrans.setPropagate(false);
-                } else
-                    solver.addPFGEdge(csFrom, csManager.getCSVar(ctx, to), PointerFlowEdge.Kind.TAINT, taintTrans);
+                }
+                solver.addPFGEdge(csFrom, csManager.getCSVar(ctx, to), PointerFlowEdge.Kind.TAINT, taintTrans);
             }
         });
 
@@ -228,8 +232,8 @@ public class TaintAnalysis implements Plugin {
             }
         });
         sinkInfo = sinkResult;
-//        printTaint(result);
-        showRelation();
+        printTaint(result);
+//        showRelation();
         return taintFlows;
     }
 

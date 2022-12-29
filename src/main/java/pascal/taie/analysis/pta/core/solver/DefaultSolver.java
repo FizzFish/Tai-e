@@ -114,7 +114,7 @@ public class DefaultSolver implements Solver {
     private PointerFlowGraph pointerFlowGraph;
 
     private Set<JMethod> reachableMethods;
-    private Set<CSCallSite> reachableCallSite;
+//    private Set<CSCallSite> reachableCallSite;
 
     /**
      * Set of classes that have been initialized.
@@ -130,7 +130,7 @@ public class DefaultSolver implements Solver {
 
     private PointerAnalysisResult result;
 
-    private List<Invoke> chaCallSite = new ArrayList<>();
+    private Queue<CSCallSite> unResolvedCallSite = new ArrayDeque<>();
 
     public DefaultSolver(AnalysisOptions options, HeapModel heapModel,
                          ContextSelector contextSelector, CSManager csManager) {
@@ -221,7 +221,6 @@ public class DefaultSolver implements Solver {
         pointerFlowGraph = new PointerFlowGraph();
         workList = new WorkList();
         reachableMethods = Sets.newSet();
-        reachableCallSite = Sets.newSet();
         initializedClasses = Sets.newSet();
         ignoredMethods = Sets.newSet();
         stmtProcessor = new StmtProcessor();
@@ -231,7 +230,28 @@ public class DefaultSolver implements Solver {
     /**
      * Processes work list entries until the work list is empty.
      */
-    private void analyze() {
+    private  void analyze() {
+        do {
+            _analyze();
+            if (unResolvedCallSite.isEmpty())
+                break;
+            while (!unResolvedCallSite.isEmpty()) {
+                CSCallSite csCallSite = unResolvedCallSite.poll();
+                Invoke callSite = csCallSite.getCallSite();
+                if (!callSite.isResolved()) {
+                    Var base = ((InvokeInstanceExp) callSite.getInvokeExp()).getBase();
+                    Context context = csCallSite.getContext();
+                    Obj genObj = heapModel.getGenObj(callSite, base.getType());
+                    Pointer csVar = csManager.getCSVar(context, base);
+                    addPointsTo(csVar, context, genObj);
+                    break;
+                }
+            }
+
+        } while(true);
+        plugin.onFinish();
+    }
+    private void _analyze() {
         while (!workList.isEmpty()) {
             WorkList.Entry entry = workList.pollEntry();
             if (entry instanceof WorkList.PointerEntry pEntry) {
@@ -244,17 +264,14 @@ public class DefaultSolver implements Solver {
                     processArrayStore(v, diff);
                     processArrayLoad(v, diff);
                     processCall(v, diff);
-//                    CSObj csTaint = diff.getTaint();
-//                    if (csTaint != null)
-//                        processArgCall(v, csTaint);
-
+                    if (diff.containTaint())
+                        processArgCall(v);
                     plugin.onNewPointsToSet(v, diff);
                 }
             } else if (entry instanceof WorkList.CallEdgeEntry eEntry) {
                 processCallEdge(eEntry.edge());
             }
         }
-        plugin.onFinish();
     }
 
     /**
@@ -382,35 +399,15 @@ public class DefaultSolver implements Solver {
     }
 
     // explore unResolveCallSites with CHA if arg is taint
-    private void processArgCall(CSVar csArg, CSObj csTaint) {
+    private void processArgCall(CSVar csArg) {
         // explore CHA since pts contains taint
-        Context context = csTaint.getContext();
         Var arg = csArg.getVar();
+        Context context = csArg.getContext();
 
         arg.getArgInvokes().forEach(callSite -> {
             // explore: empty.virtualCall(taintArg, ...) callee with CHA
             if (!callSite.isResolved()) {
-                Var base = ((InvokeInstanceExp) callSite.getInvokeExp()).getBase();
-                Obj obj = heapModel.getGenObj(callSite, base.getType());
-                Set<JMethod> methods = CallGraphs.resolve(base.getType(), callSite);
-                methods.forEach(callee -> {
-                    // select context
-                    CSCallSite csCallSite = csManager.getCSCallSite(context, callSite);
-                    Context calleeContext = contextSelector.selectContext(
-                            csCallSite, csTaint, callee);
-                    // build call edge
-                    CSMethod csCallee = csManager.getCSMethod(calleeContext, callee);
-                    addCallEdge(new Edge<>(CallGraphs.getCallKind(callSite),
-                            csCallSite, csCallee));
-                    if (!isIgnored(callee)) {
-                        Var thisVar = callee.getIR().getThis();
-                        CSVar CSThis = csManager.getCSVar(calleeContext, thisVar);
-                        CSVar csBase = csManager.getCSVar(context, base);
-                        addVarPointsTo(calleeContext, thisVar, context, obj);
-//                    Transfer callTransfer = new CallTransfer(true);
-                        addPFGEdge(csBase, CSThis, PointerFlowEdge.Kind.PARAMETER_PASSING);
-                    }
-                });
+                unResolvedCallSite.add(csManager.getCSCallSite(context, callSite));
             }
         });
     }
@@ -439,8 +436,16 @@ public class DefaultSolver implements Solver {
                         // taintObj polymorphism for application method
                         if (methodRef.getDeclaringClass().isApplication())
                             methods = CallGraphs.resolve(var.getType(), callSite);
-                        else
-                            methods.add(methodRef.resolve());
+                        else {
+                            JMethod callee = methodRef.resolve();
+                            methods.add(callee);
+                            Var lhs = callSite.getResult();
+                            if (lhs != null && isConcerned(lhs) && isIgnored(callee)) {
+                                Obj genObj = heapModel.getGenObj(callSite, lhs.getType());
+                                Context heapContext = contextSelector.getEmptyContext(); // contextSelector.selectHeapContext(csMethod, obj);
+                                addVarPointsTo(context, lhs, heapContext, genObj);
+                            }
+                        }
                     }
 //                    processNewCSInvoke(csManager.getCSCallSite(context, callSite));
                     if (methods.isEmpty())
@@ -523,13 +528,12 @@ public class DefaultSolver implements Solver {
         }
     }
 
-    private void processNewCSInvoke(CSCallSite csCallSite) {
-//        CSCallSite csCallSite = csManager.getCSCallSite(context, callSite);
-        if (reachableCallSite.contains(csCallSite))
-            reachableCallSite.add(csCallSite);
-        else
-            plugin.onNewCallSite(csCallSite);
-    }
+//    private void processNewCSInvoke(CSCallSite csCallSite) {
+//        if (reachableCallSite.contains(csCallSite))
+//            reachableCallSite.add(csCallSite);
+//        else
+//            plugin.onNewCallSite(csCallSite);
+//    }
 
     /**
      * @return true if the type of given expression is concerned in
@@ -645,7 +649,7 @@ public class DefaultSolver implements Solver {
                 JMethod callee = CallGraphs.resolveCallee(null, callSite);
                 if (callee != null) {
                     CSCallSite csCallSite = csManager.getCSCallSite(context, callSite);
-                    processNewCSInvoke(csCallSite);
+//                    processNewCSInvoke(csCallSite);
                     Context calleeCtx = contextSelector.selectContext(csCallSite, callee);
                     CSMethod csCallee = csManager.getCSMethod(calleeCtx, callee);
                     addCallEdge(new Edge<>(CallKind.STATIC, csCallSite, csCallee));
@@ -653,7 +657,7 @@ public class DefaultSolver implements Solver {
                     Var lhs = callSite.getResult();
                     if (lhs != null && isConcerned(lhs) && isIgnored(callee)) {
                         Obj obj = heapModel.getGenObj(callSite, lhs.getType());
-                        Context heapContext = contextSelector.selectHeapContext(csMethod, obj);
+                        Context heapContext = contextSelector.getEmptyContext(); // contextSelector.selectHeapContext(csMethod, obj);
                         addVarPointsTo(context, lhs, heapContext, obj);
                     }
                 }

@@ -13,6 +13,8 @@ transfers:
   - { method: "<java.lang.Class: java.lang.Object newInstance()>", from: base, to: result, type: "java.lang.Object" }
   - { method: "<java.util.Map: java.lang.Object get(java.lang.Object)>", from: 0, to: result, type: "config" }
   - { method: "<java.util.List: java.lang.Object get(int)>", from: base, to: result, type: "java.lang.Object" }
+  - { method: "<java.io.StringReader: void <init>(java.lang.String)>", from: 0, to: base, type: "taint" }
+  - { method: "<ognl.JavaCharStream: void <init>(java.io.Reader,int,int)", from: 0, to: base, type: "taint" }
   - { method: "<java.lang.Class: java.lang.reflect.Field getField(java.lang.String)>", from: base, to: result, type: "java.lang.reflect.Field" }
   - { method: "<java.util.regex.Pattern: java.util.regex.Matcher matcher(java.lang.CharSequence)>", from: 0, to: result, type: "java.util.regex.Matcher" }
   - { method: "<java.util.regex.Matcher: java.lang.String group(int)>", from: base, to: result, type: "java.lang.String" }

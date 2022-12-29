@@ -77,9 +77,10 @@ public class Invoke extends DefinitionStmt<Var, InvokeExp>
         if (invokeExp instanceof InvokeInstanceExp) {
             Var base = ((InvokeInstanceExp) invokeExp).getBase();
             base.addInvoke(this);
-//            invokeExp.getArgs().forEach(arg -> {
-//                arg.addArgInvoke(this);
-//            });
+            // record to generate object for invoke needed
+            invokeExp.getArgs().forEach(arg -> {
+                arg.addArgInvoke(this);
+            });
         }
         this.container = method;
     }
