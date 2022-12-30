@@ -94,7 +94,7 @@ public class TaintAnalysis implements Plugin {
         this.solver = solver;
         csManager = solver.getCSManager();
         emptyContext = solver.getContextSelector().getEmptyContext();
-        manager = new TaintManager(solver.getHeapModel());
+        manager = solver.getTaintManager();
         config = TaintConfig.readConfig(
                 solver.getOptions().getString("taint-config"),
                 solver.getHierarchy(),
@@ -166,17 +166,14 @@ public class TaintAnalysis implements Plugin {
                 int kind = 1;
                 if (transfer.kind().equals("config"))
                     kind = 0;
-                Type returnType = caller.getReturnType();
-                if (returnType instanceof VoidType) {
-                    returnType = caller.getDeclaringClass().getType();
-                }
+                Type returnType = to.getType();
 
                 // propagate when csFrom contains taintObj
                 // another resolve: varTransfers.put(from, new ThreePair<>(to, type, stmt));
                 CSVar csFrom = csManager.getCSVar(ctx, from);
                 PointsToSet pts = solver.getPointsToSetOf(csFrom);
                 CSObj taint = pts.getTaint();
-                TaintTrans taintTrans = new TaintTrans(returnType, solver, manager, stmt, kind);
+                TaintTrans taintTrans = new TaintTrans(returnType, solver, stmt, kind);
                 if (taint != null) {
                     TaintObj newTaint = manager.makeTaint(taint.getObject(), returnType, stmt);
                     newTaint.setKind(kind);
@@ -242,7 +239,6 @@ public class TaintAnalysis implements Plugin {
         solver.getPFG().getPointers().forEach(p -> {
             p.getOutEdges().forEach(e -> {
                 if (e.getTransfer().hasTaint() && e.getSource() != e.getTarget()) {
-//                    System.out.println(e.format());
                     graph.addRelation(e);
                 }
             });
@@ -254,7 +250,7 @@ public class TaintAnalysis implements Plugin {
     private void printTaint(PointerAnalysisResult result) {
         Map<JMethod, List> taints = new HashMap();
         result.getVars().forEach(var -> {
-            if (result.getPointsToSet(var).stream().filter(manager::isTaint).count() > 0){
+            if (result.getPointsToSet(var).stream().filter(Obj::isPolymorphism).count() > 0){
                 JMethod method = var.getMethod();
                 String name = var.getName();
                 if (taints.containsKey(method)) {

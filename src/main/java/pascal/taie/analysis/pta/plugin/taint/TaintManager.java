@@ -39,7 +39,7 @@ public class TaintManager {
 
     private final HeapModel heapModel;
 
-    TaintManager(HeapModel heapModel) {
+    public TaintManager(HeapModel heapModel) {
         this.heapModel = heapModel;
     }
 
@@ -50,10 +50,6 @@ public class TaintManager {
      * @param type   type of the taint object
      * @return the taint object for given source and type.
      */
-    Obj makeTaint(Invoke source, Type type) {
-        return heapModel.getMockObj(TAINT_DESC, source, type);
-    }
-
     public TaintObj makeTaint(Obj parent, Type type, String stmt) {
         return heapModel.getTaintObj(parent, type, stmt);
     }

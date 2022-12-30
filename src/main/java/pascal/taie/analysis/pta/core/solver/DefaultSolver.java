@@ -47,6 +47,7 @@ import pascal.taie.analysis.pta.core.heap.MockObj;
 import pascal.taie.analysis.pta.core.heap.Obj;
 import pascal.taie.analysis.pta.core.heap.TaintObj;
 import pascal.taie.analysis.pta.plugin.Plugin;
+import pascal.taie.analysis.pta.plugin.taint.TaintManager;
 import pascal.taie.analysis.pta.pts.PointsToSet;
 import pascal.taie.analysis.pta.pts.PointsToSetFactory;
 import pascal.taie.config.AnalysisOptions;
@@ -76,6 +77,7 @@ import java.util.*;
 
 import static pascal.taie.language.classes.Signatures.FINALIZE;
 import static pascal.taie.language.classes.Signatures.FINALIZER_REGISTER;
+import static pascal.taie.language.type.PrimitiveType.CHAR;
 
 public class DefaultSolver implements Solver {
 
@@ -131,6 +133,7 @@ public class DefaultSolver implements Solver {
     private PointerAnalysisResult result;
 
     private Queue<CSCallSite> unResolvedCallSite = new ArrayDeque<>();
+    private TaintManager taintManager;
 
     public DefaultSolver(AnalysisOptions options, HeapModel heapModel,
                          ContextSelector contextSelector, CSManager csManager) {
@@ -142,6 +145,7 @@ public class DefaultSolver implements Solver {
         typeSystem = World.get().getTypeSystem();
         ptsFactory = new PointsToSetFactory(csManager.getObjectIndexer());
         onlyApp = options.getBoolean("only-app");
+        taintManager = new TaintManager(heapModel);
     }
 
     public PointerFlowGraph getPFG() {
@@ -165,6 +169,9 @@ public class DefaultSolver implements Solver {
     @Override
     public CSManager getCSManager() {
         return csManager;
+    }
+    public TaintManager getTaintManager() {
+        return taintManager;
     }
 
     @Override
@@ -334,6 +341,9 @@ public class DefaultSolver implements Solver {
                     InstanceField instField = csManager.getInstanceField(
                             baseObj, field);
                     addPFGEdge(instField, to, PointerFlowEdge.Kind.INSTANCE_LOAD);
+                    if (toVar.getType() instanceof ArrayType) {
+                        addPFGEdge(to, instField, PointerFlowEdge.Kind.INSTANCE_LOAD_ARR);
+                    }
                 });
             }
         }
@@ -364,7 +374,7 @@ public class DefaultSolver implements Solver {
                 CSVar from = csManager.getCSVar(context, rvalue);
                 pts.forEach(array -> {
                     // arr[i] = y  arr need be ArrayType kind
-                    if (array.getObject() instanceof TaintObj == false) {
+                    if (array.getObject().getType() instanceof ArrayType) {
                         // donot transfer taint obj to array
                         ArrayIndex arrayIndex = csManager.getArrayIndex(array);
                         // we need type guard for array stores as Java arrays
@@ -373,6 +383,8 @@ public class DefaultSolver implements Solver {
                                 PointerFlowEdge.Kind.ARRAY_STORE, arrayIndex.getType());
                     }
                 });
+                TaintTrans taintTrans = new TaintTrans(rvalue.getType(), this, store.toString(), 1);
+                addPFGEdge(from, arrayVar, PointerFlowEdge.Kind.TAINT, taintTrans);
             }
         }
     }
@@ -388,13 +400,18 @@ public class DefaultSolver implements Solver {
         Var var = arrayVar.getVar();
         for (LoadArray load : var.getLoadArrays()) {
             Var lvalue = load.getLValue();
+            CSVar to = csManager.getCSVar(context, lvalue);
             if (isConcerned(lvalue)) {
-                CSVar to = csManager.getCSVar(context, lvalue);
                 pts.forEach(array -> {
                     ArrayIndex arrayIndex = csManager.getArrayIndex(array);
+                    // y = arr[i]; arr_index => y
                     addPFGEdge(arrayIndex, to, PointerFlowEdge.Kind.ARRAY_LOAD);
                 });
+                // y = arr[i]; arr => y
+                TaintTrans taintTrans = new TaintTrans(lvalue.getType(), this, load.toString(), 1);
+                addPFGEdge(arrayVar, to, PointerFlowEdge.Kind.TAINT, taintTrans);
             }
+
         }
     }
 
@@ -541,6 +558,8 @@ public class DefaultSolver implements Solver {
      */
     private static boolean isConcerned(Exp exp) {
         Type type = exp.getType();
+        if (type == CHAR)
+            return true;
         return type instanceof ReferenceType && !(type instanceof NullType);
     }
 
@@ -792,6 +811,9 @@ public class DefaultSolver implements Solver {
             PointsToSet targetSet = transfer.apply(edge, getPointsToSetOf(source));
             if (!targetSet.isEmpty()) {
                 addPointsTo(target, targetSet);
+                if (source instanceof InstanceField instanceField && targetSet.containTaint()) {
+                    instanceField.getBase().getObject().setPolymorphism(true);
+                }
             }
         }
     }

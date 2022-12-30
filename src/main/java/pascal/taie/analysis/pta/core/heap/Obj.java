@@ -36,6 +36,7 @@ import java.util.Optional;
 public abstract class Obj implements Indexable {
 
     private int index = -1;
+    private boolean polymorphism = false;
 
     void setIndex(int index) {
         if (this.index != -1) {
@@ -78,6 +79,9 @@ public abstract class Obj implements Indexable {
      */
     public abstract Type getContainerType();
     public boolean isPolymorphism() {
-        return false;
+        return polymorphism;
+    }
+    public void setPolymorphism(boolean polymorphism) {
+        this.polymorphism = polymorphism;
     }
 }

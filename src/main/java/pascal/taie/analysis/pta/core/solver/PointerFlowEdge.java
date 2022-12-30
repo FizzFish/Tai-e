@@ -80,6 +80,7 @@ public class PointerFlowEdge extends AbstractEdge<Pointer> {
 
         INSTANCE_LOAD,
         INSTANCE_STORE,
+        INSTANCE_LOAD_ARR,
 
         ARRAY_LOAD,
         ARRAY_STORE,

@@ -64,6 +64,8 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Stream;
 
+import static pascal.taie.language.type.PrimitiveType.CHAR;
+
 public class PointerAnalysisResultImpl extends AbstractResultHolder
         implements PointerAnalysisResult {
 
@@ -131,6 +133,8 @@ public class PointerAnalysisResultImpl extends AbstractResultHolder
     }
 
     private static boolean isConcerned(Type type) {
+        if (type == CHAR)
+            return true;
         return type instanceof ReferenceType && !(type instanceof NullType);
     }
 

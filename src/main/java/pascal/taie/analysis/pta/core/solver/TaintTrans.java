@@ -32,16 +32,14 @@ import java.util.function.Supplier;
 
 public class TaintTrans implements Transfer {
     private final Type type;
-    private final TaintManager manager;
     private final String stmt;
     private final Solver solver;
     private final int kind;
     private boolean needPropagate;
-    public TaintTrans(Type type, Solver solver, TaintManager manager, String stmt, int kind) {
+    public TaintTrans(Type type, Solver solver, String stmt, int kind) {
         this.type = type;
         this.solver = solver;
         this.needPropagate = true;
-        this.manager = manager;
         this.stmt = stmt;
         this.kind = kind;
     }
@@ -64,7 +62,7 @@ public class TaintTrans implements Transfer {
         CSObj csTaint = input.getTaint();
         if (csTaint != null) {
             TaintObj taint = (TaintObj) csTaint.getObject();
-            TaintObj newTaint = manager.makeTaint(taint, type, stmt);
+            TaintObj newTaint = solver.getTaintManager().makeTaint(taint, type, stmt);
             if (taint.isRealTaint()) // may generate config taint object
                 newTaint.setKind(kind);
             CSObj newObj = solver.getCSManager().getCSObj(csTaint.getContext(), newTaint);

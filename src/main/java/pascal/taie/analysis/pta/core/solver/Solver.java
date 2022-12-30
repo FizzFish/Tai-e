@@ -35,6 +35,7 @@ import pascal.taie.analysis.pta.core.cs.selector.ContextSelector;
 import pascal.taie.analysis.pta.core.heap.HeapModel;
 import pascal.taie.analysis.pta.core.heap.Obj;
 import pascal.taie.analysis.pta.plugin.Plugin;
+import pascal.taie.analysis.pta.plugin.taint.TaintManager;
 import pascal.taie.analysis.pta.pts.PointsToSet;
 import pascal.taie.config.AnalysisOptions;
 import pascal.taie.ir.exp.Var;
@@ -60,6 +61,7 @@ public interface Solver {
     HeapModel getHeapModel();
 
     CSManager getCSManager();
+    TaintManager getTaintManager();
 
     ContextSelector getContextSelector();
 
