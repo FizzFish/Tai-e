@@ -81,6 +81,9 @@ public abstract class Obj implements Indexable {
     public boolean isPolymorphism() {
         return polymorphism;
     }
+    public boolean isTaint() {
+        return false;
+    }
     public void setPolymorphism(boolean polymorphism) {
         this.polymorphism = polymorphism;
     }

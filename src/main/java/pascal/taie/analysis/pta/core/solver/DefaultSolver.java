@@ -335,13 +335,16 @@ public class DefaultSolver implements Solver {
                 CSVar to = csManager.getCSVar(context, toVar);
                 pts.forEach(baseObj -> {
                     Obj obj = baseObj.getObject();
+                    // y = taint.f; y<=taint
                     if (obj instanceof TaintObj && isBasicField(field)) {
                         addPointsTo(to, baseObj);
                     }
                     InstanceField instField = csManager.getInstanceField(
                             baseObj, field);
                     addPFGEdge(instField, to, PointerFlowEdge.Kind.INSTANCE_LOAD);
-                    if (toVar.getType() instanceof ArrayType) {
+                    // tmp = this.arr|list
+//                    if (toVar.getType() instanceof ArrayType || toVar.getType().toString().contains("List")) {
+                    if (isArrayOrList(toVar)) {
                         addPFGEdge(to, instField, PointerFlowEdge.Kind.INSTANCE_LOAD_ARR);
                     }
                 });
@@ -356,6 +359,16 @@ public class DefaultSolver implements Solver {
         // java.lang.String, java.util.List/Map
         if (typeName.startsWith("java.lang") || typeName.startsWith("java.util"))
             return true;
+        return false;
+    }
+    private boolean isArrayOrList(Var var) {
+        Type type = var.getType();
+        if (type instanceof ArrayType)
+            return true;
+        if (type instanceof ClassType classType) {
+            if (classType.getName().startsWith("java.util"))
+                return true;
+        }
         return false;
     }
 
@@ -451,16 +464,19 @@ public class DefaultSolver implements Solver {
                     } else {
                         MethodRef methodRef = callSite.getMethodRef();
                         // taintObj polymorphism for application method
-                        if (methodRef.getDeclaringClass().isApplication())
-                            methods = CallGraphs.resolve(var.getType(), callSite);
-                        else {
-                            JMethod callee = methodRef.resolve();
-                            methods.add(callee);
-                            Var lhs = callSite.getResult();
-                            if (lhs != null && isConcerned(lhs) && isIgnored(callee)) {
-                                Obj genObj = heapModel.getGenObj(callSite, lhs.getType());
-                                Context heapContext = contextSelector.getEmptyContext(); // contextSelector.selectHeapContext(csMethod, obj);
-                                addVarPointsTo(context, lhs, heapContext, genObj);
+                        if (methodRef.getDeclaringClass().isApplication()) {
+                            if (!callSite.isResolved()) // one time enough
+                                methods = CallGraphs.resolve(var.getType(), callSite);
+                        } else {
+                            JMethod callee = methodRef.resolveNullable();
+                            if (callee != null) {
+                                methods.add(callee);
+                                Var lhs = callSite.getResult();
+                                if (lhs != null && isConcerned(lhs) && isIgnored(callee)) {
+                                    Obj genObj = heapModel.getGenObj(callSite, lhs.getType());
+                                    Context heapContext = contextSelector.getEmptyContext(); // contextSelector.selectHeapContext(csMethod, obj);
+                                    addVarPointsTo(context, lhs, heapContext, genObj);
+                                }
                             }
                         }
                     }
@@ -673,12 +689,12 @@ public class DefaultSolver implements Solver {
                     CSMethod csCallee = csManager.getCSMethod(calleeCtx, callee);
                     addCallEdge(new Edge<>(CallKind.STATIC, csCallSite, csCallee));
                     // genObj is callee is JDK method
-                    Var lhs = callSite.getResult();
-                    if (lhs != null && isConcerned(lhs) && isIgnored(callee)) {
-                        Obj obj = heapModel.getGenObj(callSite, lhs.getType());
-                        Context heapContext = contextSelector.getEmptyContext(); // contextSelector.selectHeapContext(csMethod, obj);
-                        addVarPointsTo(context, lhs, heapContext, obj);
-                    }
+//                    Var lhs = callSite.getResult();
+//                    if (lhs != null && isConcerned(lhs) && isIgnored(callee)) {
+//                        Obj obj = heapModel.getGenObj(callSite, lhs.getType());
+//                        Context heapContext = contextSelector.getEmptyContext(); // contextSelector.selectHeapContext(csMethod, obj);
+//                        addVarPointsTo(context, lhs, heapContext, obj);
+//                    }
                 }
 
             }
@@ -702,6 +718,8 @@ public class DefaultSolver implements Solver {
                     CSVar from = csManager.getCSVar(context, rvalue);
                     CSVar to = csManager.getCSVar(context, stmt.getLValue());
                     addPFGEdge(from, to, PointerFlowEdge.Kind.LOCAL_ASSIGN);
+                    if (isArrayOrList(rvalue))
+                        addPFGEdge(to, from, PointerFlowEdge.Kind.LOCAL_ASSIGN);
                 }
                 return null;
             }

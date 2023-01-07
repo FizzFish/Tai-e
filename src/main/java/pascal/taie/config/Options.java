@@ -98,7 +98,7 @@ public class Options {
                 List res = Files.walk(Paths.get(path))
                         .filter(Files::isRegularFile).map(String::valueOf)
                         .collect(Collectors.toList());
-                classPath = String.join(";", res);
+                classPath = String.join(File.pathSeparator, res);
             } catch (IOException e) {
                 e.printStackTrace();
             } finally {

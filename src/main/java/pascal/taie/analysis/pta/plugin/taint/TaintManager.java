@@ -62,7 +62,7 @@ public class TaintManager {
      */
     boolean isTaint(Obj obj) {
         if (obj instanceof TaintObj taintObj) {
-            return taintObj.isRealTaint();
+            return taintObj.isTaint();
         }
         return false;
     }

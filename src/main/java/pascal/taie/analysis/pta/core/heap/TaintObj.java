@@ -42,12 +42,12 @@ public class TaintObj extends Obj{
     public boolean isPolymorphism() {
         return true;
     }
+    public boolean isTaint() {
+        return kind == 1;
+    }
 
     public void setKind(int kind) {
         this.kind = kind;
-    }
-    public boolean isRealTaint() {
-        return kind == 1;
     }
 
     public String toString() {

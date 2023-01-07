@@ -38,19 +38,15 @@ import pascal.taie.ir.IRPrinter;
 import pascal.taie.ir.exp.InvokeExp;
 import pascal.taie.ir.exp.InvokeInstanceExp;
 import pascal.taie.ir.exp.Var;
-import pascal.taie.ir.proginfo.MethodResolutionFailedException;
 import pascal.taie.ir.stmt.Invoke;
 import pascal.taie.language.classes.JField;
 import pascal.taie.language.classes.JMethod;
 import pascal.taie.language.type.Type;
-import pascal.taie.language.type.VoidType;
 import pascal.taie.util.collection.Maps;
 import pascal.taie.util.collection.MultiMap;
-import pascal.taie.util.collection.Pair;
 import pascal.taie.util.collection.ThreePair;
 
 import java.util.*;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.neo4j.driver.Values.parameters;
 import static pascal.taie.analysis.pta.core.solver.PointerFlowEdge.Kind.*;
@@ -163,24 +159,29 @@ public class TaintAnalysis implements Plugin {
             // when transfer to result variable, and the call site
             // does not have result variable, then "to" is null.
             if (to != null) {
-                int kind = 1;
-                if (transfer.kind().equals("config"))
-                    kind = 0;
-                Type returnType = to.getType();
+                if (transfer.kind().equals("trans")) {
+                    CSVar csFrom = csManager.getCSVar(ctx, from);
+                    solver.addPFGEdge(csFrom, csManager.getCSVar(ctx, to), JDK_TRANS);
+                } else {
+                    int kind = 1;
+                    if (transfer.kind().equals("config"))
+                        kind = 0;
+                    Type returnType = to.getType();
 
-                // propagate when csFrom contains taintObj
-                // another resolve: varTransfers.put(from, new ThreePair<>(to, type, stmt));
-                CSVar csFrom = csManager.getCSVar(ctx, from);
-                PointsToSet pts = solver.getPointsToSetOf(csFrom);
-                CSObj taint = pts.getTaint();
-                TaintTrans taintTrans = new TaintTrans(returnType, solver, stmt, kind);
-                if (taint != null) {
-                    TaintObj newTaint = manager.makeTaint(taint.getObject(), returnType, stmt);
-                    newTaint.setKind(kind);
-                    solver.addVarPointsTo(ctx, to, emptyContext, newTaint);
-                    taintTrans.setPropagate(false);
+                    // propagate when csFrom contains taintObj
+                    // another resolve: varTransfers.put(from, new ThreePair<>(to, type, stmt));
+                    CSVar csFrom = csManager.getCSVar(ctx, from);
+                    PointsToSet pts = solver.getPointsToSetOf(csFrom);
+                    CSObj taint = pts.getTaint();
+                    TaintTrans taintTrans = new TaintTrans(returnType, solver, stmt, kind);
+                    if (taint != null) {
+                        TaintObj newTaint = manager.makeTaint(taint.getObject(), returnType, stmt);
+                        newTaint.setKind(kind);
+                        solver.addVarPointsTo(ctx, to, emptyContext, newTaint);
+                        taintTrans.setPropagate(false);
+                    }
+                    solver.addPFGEdge(csFrom, csManager.getCSVar(ctx, to), PointerFlowEdge.Kind.TAINT, taintTrans);
                 }
-                solver.addPFGEdge(csFrom, csManager.getCSVar(ctx, to), PointerFlowEdge.Kind.TAINT, taintTrans);
             }
         });
 
@@ -249,8 +250,9 @@ public class TaintAnalysis implements Plugin {
     }
     private void printTaint(PointerAnalysisResult result) {
         Map<JMethod, List> taints = new HashMap();
+        System.out.println(result.getVars().size());
         result.getVars().forEach(var -> {
-            if (result.getPointsToSet(var).stream().filter(Obj::isPolymorphism).count() > 0){
+            if (result.getPointsToSet(var).stream().filter(manager::isTaint).count() > 0){
                 JMethod method = var.getMethod();
                 String name = var.getName();
                 if (taints.containsKey(method)) {

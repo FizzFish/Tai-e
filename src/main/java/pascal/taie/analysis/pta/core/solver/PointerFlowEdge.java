@@ -92,5 +92,6 @@ public class PointerFlowEdge extends AbstractEdge<Pointer> {
         RETURN,
 
         TAINT,
+        JDK_TRANS,
     }
 }
