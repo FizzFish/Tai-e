@@ -137,21 +137,6 @@ public class TaintAnalysis implements Plugin {
                 sinkInfo.put(sink.method(), var);
             }
         });
-//        if (caller.getName().equals("<init>")) {
-//            for (Var arg : callSite.getInvokeExp().getArgs()) {
-//                CSVar csArg = csManager.getCSVar(ctx, arg);
-//                PointsToSet pts = solver.getPointsToSetOf(csArg);
-//                Var base = getVar(callSite, -1);
-//                CSObj taint = pts.getTaint();
-//                TaintTrans taintTrans = new TaintTrans(base.getType(), solver);
-//                if (taint != null) {
-//                    solver.addVarPointsTo(ctx, base, emptyContext, manager.makeTaint(taint.getObject(), base.getType(), stmt));
-//                    taintTrans.setPropagate(false);
-//                    break;
-//                }
-//                solver.addPFGEdge(csArg, csManager.getCSVar(ctx, base), PointerFlowEdge.Kind.TAINT, taintTrans);
-//            }
-//        }
         transfers.get(caller).forEach(transfer -> {
             Var from = getVar(callSite, transfer.from());
             Var to = getVar(callSite, transfer.to());
@@ -176,7 +161,8 @@ public class TaintAnalysis implements Plugin {
                     TaintTrans taintTrans = new TaintTrans(returnType, solver, stmt, kind);
                     if (taint != null) {
                         TaintObj newTaint = manager.makeTaint(taint.getObject(), returnType, stmt);
-                        newTaint.setKind(kind);
+//                        if (kind == 0)
+                            newTaint.setKind(kind);
                         solver.addVarPointsTo(ctx, to, emptyContext, newTaint);
                         taintTrans.setPropagate(false);
                     }
@@ -224,9 +210,13 @@ public class TaintAnalysis implements Plugin {
         MultiMap<JMethod, Var> sinkResult = Maps.newMultiMap();
         // clear unTaint sinkVar
         sinkInfo.forEach((method, var) -> {
-            if (result.getPointsToSet(var).stream().filter(manager::isTaint).count() > 0) {
+            long count = result.getPointsToSet(var).stream().filter(manager::isTaint).count();
+            if (count > 0) {
                 sinkResult.put(method, var);
-                System.out.printf("Find sink: %s with %s in %s\n", method, var.toString(), var.getMethod());
+                System.out.printf("Find %d sink: %s with %s in %s\n", count, method, var.toString(), var.getMethod());
+                result.getPointsToSet(var).stream().filter(manager::isTaint).forEach(sink -> {
+                    System.out.println(sink);
+                });
             }
         });
         sinkInfo = sinkResult;
@@ -250,7 +240,6 @@ public class TaintAnalysis implements Plugin {
     }
     private void printTaint(PointerAnalysisResult result) {
         Map<JMethod, List> taints = new HashMap();
-        System.out.println(result.getVars().size());
         result.getVars().forEach(var -> {
             if (result.getPointsToSet(var).stream().filter(manager::isTaint).count() > 0){
                 JMethod method = var.getMethod();

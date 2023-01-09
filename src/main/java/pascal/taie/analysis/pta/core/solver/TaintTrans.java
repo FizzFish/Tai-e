@@ -45,7 +45,7 @@ public class TaintTrans implements Transfer {
     }
 
     public boolean hasTaint() {
-        return !needPropagate;
+        return kind == 1;
     }
     @Override
     public boolean needPropagate() {
@@ -63,8 +63,8 @@ public class TaintTrans implements Transfer {
         if (csTaint != null) {
             TaintObj taint = (TaintObj) csTaint.getObject();
             TaintObj newTaint = solver.getTaintManager().makeTaint(taint, type, stmt);
-            if (taint.isTaint()) // may generate config taint object
-                newTaint.setKind(kind);
+            if (kind == 0) // may generate config taint object
+                newTaint.setKind(0);
             CSObj newObj = solver.getCSManager().getCSObj(csTaint.getContext(), newTaint);
             result.addObject(newObj);
             needPropagate = false;

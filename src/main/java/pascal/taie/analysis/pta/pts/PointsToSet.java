@@ -71,7 +71,7 @@ public interface PointsToSet extends Iterable<CSObj>, Copyable<PointsToSet> {
     }
     default boolean containTaint() {
         for (CSObj csObj : getObjects()) {
-            if (csObj.getObject() instanceof TaintObj)
+            if (csObj.getObject().isTaint())
                 return true;
         }
         return false;

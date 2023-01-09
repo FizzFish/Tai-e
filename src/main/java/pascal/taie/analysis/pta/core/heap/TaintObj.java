@@ -18,6 +18,8 @@ public class TaintObj extends Obj{
         this.parent = parent;
         this.stmt = stmt;
         this.container = null;
+        if (parent == null || (parent != null && parent.isTaint()))
+            kind = 1;
     }
 
     public Type getType() {

@@ -76,7 +76,8 @@ public class TypeFilter implements Transfer {
             if (typeSystem.isSubtype(type, obj.getType()))
                 result.addObject(csobj);
             if (obj instanceof TaintObj) {
-                hasTaintObj = true;
+                if (obj.isTaint())
+                    hasTaintObj = true;
                 result.addObject(csobj);
             }
         }
