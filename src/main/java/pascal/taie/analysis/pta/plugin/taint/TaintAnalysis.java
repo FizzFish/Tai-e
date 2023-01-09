@@ -156,16 +156,7 @@ public class TaintAnalysis implements Plugin {
                     // propagate when csFrom contains taintObj
                     // another resolve: varTransfers.put(from, new ThreePair<>(to, type, stmt));
                     CSVar csFrom = csManager.getCSVar(ctx, from);
-                    PointsToSet pts = solver.getPointsToSetOf(csFrom);
-                    CSObj taint = pts.getTaint();
                     TaintTrans taintTrans = new TaintTrans(returnType, solver, stmt, kind);
-                    if (taint != null) {
-                        TaintObj newTaint = manager.makeTaint(taint.getObject(), returnType, stmt);
-//                        if (kind == 0)
-                            newTaint.setKind(kind);
-                        solver.addVarPointsTo(ctx, to, emptyContext, newTaint);
-                        taintTrans.setPropagate(false);
-                    }
                     solver.addPFGEdge(csFrom, csManager.getCSVar(ctx, to), PointerFlowEdge.Kind.TAINT, taintTrans);
                 }
             }
@@ -220,7 +211,7 @@ public class TaintAnalysis implements Plugin {
             }
         });
         sinkInfo = sinkResult;
-        printTaint(result);
+//        printTaint(result);
 //        showRelation();
         return taintFlows;
     }

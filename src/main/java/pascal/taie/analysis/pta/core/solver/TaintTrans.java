@@ -36,6 +36,8 @@ public class TaintTrans implements Transfer {
     private final Solver solver;
     private final int kind;
     private boolean needPropagate;
+    private int state = 0;
+    // 0: recvall; 1: only recv taint
     public TaintTrans(Type type, Solver solver, String stmt, int kind) {
         this.type = type;
         this.solver = solver;
@@ -45,29 +47,45 @@ public class TaintTrans implements Transfer {
     }
 
     public boolean hasTaint() {
-        return kind == 1;
+        return kind == 1 && state == 2;
     }
     @Override
     public boolean needPropagate() {
         return needPropagate;
     }
-    public void setPropagate(boolean need) {
-        needPropagate = need;
-    }
 
     @Override
     public PointsToSet apply(PointerFlowEdge edge, PointsToSet input) {
         PointsToSet result = solver.makePointsToSet();
-
-        CSObj csTaint = input.getTaint();
-        if (csTaint != null) {
-            TaintObj taint = (TaintObj) csTaint.getObject();
-            TaintObj newTaint = solver.getTaintManager().makeTaint(taint, type, stmt);
-            if (kind == 0) // may generate config taint object
-                newTaint.setKind(0);
-            CSObj newObj = solver.getCSManager().getCSObj(csTaint.getContext(), newTaint);
-            result.addObject(newObj);
-            needPropagate = false;
+        /**
+         * kind = 0 :
+         *  recv and mark config object, then donot need propagate
+         * kind = 1:
+         *  recv config object, then only recv taint object
+         *  after recv taint object, then donot need propagate
+         */
+        for (CSObj csObj : input) {
+            if (csObj.getObject() instanceof TaintObj taint) {
+                if (state == 1 && !taint.isTaint())
+                    continue;
+                TaintObj newTaint = solver.getTaintManager().makeTaint(taint, type, stmt);
+                if (kind == 0) // may generate config taint object
+                    newTaint.setKind(0);
+                CSObj newObj = solver.getCSManager().getCSObj(csObj.getContext(), newTaint);
+                result.addObject(newObj);
+                if (kind == 1) {
+                    if (newTaint.isTaint()) {
+                        needPropagate = false;
+                        state = 2;
+                        break;
+                    } else {
+                        state = 1;
+                    }
+                } else {
+                    needPropagate = false;
+                    break;
+                }
+            }
         }
         return result;
     }
