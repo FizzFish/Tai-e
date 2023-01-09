@@ -211,7 +211,7 @@ public class TaintAnalysis implements Plugin {
             }
         });
         sinkInfo = sinkResult;
-//        printTaint(result);
+        printTaint(result);
 //        showRelation();
         return taintFlows;
     }

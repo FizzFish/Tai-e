@@ -337,7 +337,8 @@ public class DefaultSolver implements Solver {
                     Obj obj = baseObj.getObject();
                     // y = taint.f; y<=taint
                     if (obj instanceof TaintObj && isBasicField(field)) {
-                        addPointsTo(to, baseObj);
+                        TaintObj taint = taintManager.makeTaint(obj, field.getType(), load.toString());
+                        addPointsTo(to, csManager.getCSObj(contextSelector.getEmptyContext(), taint));
                     }
                     InstanceField instField = csManager.getInstanceField(
                             baseObj, field);
@@ -395,7 +396,9 @@ public class DefaultSolver implements Solver {
                                 PointerFlowEdge.Kind.ARRAY_STORE, arrayIndex.getType());
                     }
                 });
-                TaintTrans taintTrans = new TaintTrans(rvalue.getType(), this, store.toString(), 1);
+                String stmt = String.format("[%s|%s|%s]",
+                        var.getMethod().getDeclaringClass(), var.getMethod().getName(), store.toString());
+                TaintTrans taintTrans = new TaintTrans(rvalue.getType(), this, stmt, 1);
                 addPFGEdge(from, arrayVar, PointerFlowEdge.Kind.TAINT, taintTrans);
             }
         }
@@ -420,7 +423,9 @@ public class DefaultSolver implements Solver {
                     addPFGEdge(arrayIndex, to, PointerFlowEdge.Kind.ARRAY_LOAD);
                 });
                 // y = arr[i]; arr => y
-                TaintTrans taintTrans = new TaintTrans(lvalue.getType(), this, load.toString(), 1);
+                String stmt = String.format("[%s|%s|%s]",
+                        var.getMethod().getDeclaringClass(), var.getMethod().getName(), load.toString());
+                TaintTrans taintTrans = new TaintTrans(lvalue.getType(), this, stmt, 1);
                 addPFGEdge(arrayVar, to, PointerFlowEdge.Kind.TAINT, taintTrans);
             }
 

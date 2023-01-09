@@ -62,13 +62,6 @@ public interface PointsToSet extends Iterable<CSObj>, Copyable<PointsToSet> {
      * @return true if this set contains given object, otherwise false.
      */
     boolean contains(CSObj obj);
-    default CSObj getTaint() {
-        for (CSObj csObj : getObjects()) {
-            if (csObj.getObject() instanceof TaintObj)
-                return csObj;
-        }
-        return null;
-    }
     default boolean containTaint() {
         for (CSObj csObj : getObjects()) {
             if (csObj.getObject().isTaint())

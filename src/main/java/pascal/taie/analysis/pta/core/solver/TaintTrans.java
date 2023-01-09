@@ -71,7 +71,7 @@ public class TaintTrans implements Transfer {
                 TaintObj newTaint = solver.getTaintManager().makeTaint(taint, type, stmt);
                 if (kind == 0) // may generate config taint object
                     newTaint.setKind(0);
-                CSObj newObj = solver.getCSManager().getCSObj(csObj.getContext(), newTaint);
+                CSObj newObj = solver.getCSManager().getCSObj(solver.getContextSelector().getEmptyContext(), newTaint);
                 result.addObject(newObj);
                 if (kind == 1) {
                     if (newTaint.isTaint()) {
