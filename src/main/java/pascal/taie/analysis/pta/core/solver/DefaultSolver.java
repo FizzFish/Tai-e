@@ -461,7 +461,7 @@ public class DefaultSolver implements Solver {
                     ArrayIndex arrayIndex = csManager.getArrayIndex(array);
                     addPFGEdge(arrayIndex, to, PointerFlowEdge.Kind.ARRAY_LOAD);
                 });
-                if (callSite.isCollectionLoad()) {
+                if (callSite.getMethodRef().getDeclaringClass().getName().equals("java.util.Map")) {
                     Var from = callSite.getInvokeExp().getArg(0);
                     CSVar csFrom = csManager.getCSVar(context, from);
                     TaintTrans taintTrans = new TaintTrans(to.getType(), this, callSite.format(), 0);
