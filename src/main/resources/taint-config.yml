@@ -15,7 +15,7 @@ transfers:
   - { method: "<java.lang.reflect.Method: java.lang.String getName()>", from: base, to: result, type: "taint" }
 
   - { method: "<java.lang.Class: java.lang.Object newInstance()>", from: base, to: result, type: "taint" }
-  - { method: "<java.util.Map: java.lang.Object get(java.lang.Object)>", from: 0, to: result, type: "config" }
+#  - { method: "<java.util.Map: java.lang.Object get(java.lang.Object)>", from: 0, to: result, type: "config" }
 
 #  - { method: "<java.util.Map: java.lang.Object put(java.lang.Object,java.lang.Object)>", from: 1, to: base, type: "collectionStore" }
 #  - { method: "<java.util.Map: java.lang.Object get(java.lang.Object)>", from: base, to: result, type: "collectionLoad" }
