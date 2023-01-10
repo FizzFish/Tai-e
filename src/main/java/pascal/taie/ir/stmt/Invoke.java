@@ -63,6 +63,7 @@ public class Invoke extends DefinitionStmt<Var, InvokeExp>
      */
     private final JMethod container;
     private boolean resolved = false;
+    private boolean taintResolved = false;
     private boolean isCollectionStore = false;
     private boolean isCollectionLoad = false;
 
@@ -71,6 +72,12 @@ public class Invoke extends DefinitionStmt<Var, InvokeExp>
     }
     public boolean isResolved() {
         return resolved;
+    }
+    public void setTaintResolved() {
+        taintResolved = true;
+    }
+    public boolean isTaintResolved() {
+        return taintResolved;
     }
 
     public Invoke(JMethod method, InvokeExp invokeExp, @Nullable Var result) {

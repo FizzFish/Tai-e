@@ -246,14 +246,8 @@ public class DefaultSolver implements Solver {
                     Var base = ((InvokeInstanceExp) callSite.getInvokeExp()).getBase();
                     Context context = csCallSite.getContext();
                     Pointer csVar = csManager.getCSVar(context, base);
-                    if (callSite.isCollectionLoad()) {
-                        TaintObj taint = taintManager.makeTaint(null, base.getType(), callSite.format());
-                        taint.setKind(0);
-                        addPointsTo(csVar, context, taint);
-                    } else {
-                        GenObj genObj = heapModel.getGenObj(callSite, base.getType());
-                        addPointsTo(csVar, context, genObj);
-                    }
+                    GenObj genObj = heapModel.getGenObj(callSite, base.getType());
+                    addPointsTo(csVar, context, genObj);
                     break;
                 }
             }
@@ -466,11 +460,13 @@ public class DefaultSolver implements Solver {
                 pts.forEach(array -> {
                     ArrayIndex arrayIndex = csManager.getArrayIndex(array);
                     addPFGEdge(arrayIndex, to, PointerFlowEdge.Kind.ARRAY_LOAD);
-                    if (array.getObject() instanceof TaintObj taint && !taint.isTaint()) {
-                        // configobj.get(taint) config object
-                        addPointsTo(to, array);
-                    }
                 });
+                if (callSite.isCollectionLoad()) {
+                    Var from = callSite.getInvokeExp().getArg(0);
+                    CSVar csFrom = csManager.getCSVar(context, from);
+                    TaintTrans taintTrans = new TaintTrans(to.getType(), this, callSite.format(), 0);
+                    addPFGEdge(csFrom, to, PointerFlowEdge.Kind.TAINT, taintTrans);
+                }
             } else if (callSite.isCollectionStore()) {
                 // list.add(e) | map.put(k, v)
                 Var rvalue = callSite.getInvokeExp().getLastArg();
@@ -492,10 +488,10 @@ public class DefaultSolver implements Solver {
                         MethodRef methodRef = callSite.getMethodRef();
                         // taintObj polymorphism for application method
                         if (methodRef.getDeclaringClass().isApplication()) {
-                            if (!callSite.isResolved()) {// one time enough
+                            if (!callSite.isTaintResolved()) {// one time enough
                                 methods = CallGraphs.resolve(var.getType(), callSite);
                                 if (methods.size() > 0)
-                                    callSite.setResolved();
+                                    callSite.setTaintResolved();
                             }
                         } else {
                             JMethod callee = methodRef.resolveNullable();
@@ -506,6 +502,8 @@ public class DefaultSolver implements Solver {
                     }
                     if (methods.isEmpty())
                         plugin.onUnresolvedCall(recvObj, context, callSite);
+                    else
+                        callSite.setResolved();
                     methods.forEach(callee -> {
                         if (callee != null) {
                             // select context

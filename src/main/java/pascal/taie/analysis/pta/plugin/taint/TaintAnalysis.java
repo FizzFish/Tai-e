@@ -126,7 +126,7 @@ public class TaintAnalysis implements Plugin {
     @Override
     public void onNewCallEdge(Edge<CSCallSite, CSMethod> edge) {
         Invoke callSite = edge.getCallSite().getCallSite();
-        JMethod caller = callSite.getMethodRef().resolve();
+        JMethod caller = edge.getCallee().getMethod(); // callSite.getMethodRef().resolve();
         Context ctx = edge.getCallSite().getContext();
         String stmt = callSite.format();
         // generate taint value from source call
