@@ -144,21 +144,16 @@ public class TaintAnalysis implements Plugin {
             // when transfer to result variable, and the call site
             // does not have result variable, then "to" is null.
             if (to != null) {
-                if (transfer.kind().equals("trans")) {
-                    CSVar csFrom = csManager.getCSVar(ctx, from);
-                    solver.addPFGEdge(csFrom, csManager.getCSVar(ctx, to), JDK_TRANS);
-                } else {
-                    int kind = 1;
-                    if (transfer.kind().equals("config"))
-                        kind = 0;
-                    Type returnType = to.getType();
+                int kind = 1;
+                if (transfer.kind().equals("config"))
+                    kind = 0;
+                Type toType = to.getType();
 
-                    // propagate when csFrom contains taintObj
-                    // another resolve: varTransfers.put(from, new ThreePair<>(to, type, stmt));
-                    CSVar csFrom = csManager.getCSVar(ctx, from);
-                    TaintTrans taintTrans = new TaintTrans(returnType, solver, stmt, kind);
-                    solver.addPFGEdge(csFrom, csManager.getCSVar(ctx, to), PointerFlowEdge.Kind.TAINT, taintTrans);
-                }
+                // propagate when csFrom contains taintObj
+                // another resolve: varTransfers.put(from, new ThreePair<>(to, type, stmt));
+                CSVar csFrom = csManager.getCSVar(ctx, from);
+                TaintTrans taintTrans = new TaintTrans(toType, solver, stmt, kind);
+                solver.addPFGEdge(csFrom, csManager.getCSVar(ctx, to), PointerFlowEdge.Kind.TAINT, taintTrans);
             }
         });
 
@@ -211,7 +206,7 @@ public class TaintAnalysis implements Plugin {
             }
         });
         sinkInfo = sinkResult;
-        printTaint(result);
+//        printTaint(result);
 //        showRelation();
         return taintFlows;
     }

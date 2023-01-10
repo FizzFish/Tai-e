@@ -75,6 +75,9 @@ public abstract class InvokeExp implements RValue {
     public Var getArg(int i) {
         return args.get(i);
     }
+    public Var getLastArg() {
+        return args.get(args.size() - 1);
+    }
 
     /**
      * @return a list of arguments of the invocation.

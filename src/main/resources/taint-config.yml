@@ -4,27 +4,29 @@ sinks:
   - { method: "<java.lang.reflect.Method: java.lang.Object invoke(java.lang.Object,java.lang.Object[])>", index: -1 }
 
 transfers:
-  - { method: "<java.lang.String: java.lang.String concat(java.lang.String)>", from: base, to: result, type: "java.lang.String" }
-  - { method: "<java.lang.String: java.lang.String concat(java.lang.String)>", from: 0, to: result, type: "java.lang.String" }
-  - { method: "<java.lang.String: int lastIndexOf(java.lang.String)>", from: base, to: result, type: "int" }
+  - { method: "<java.lang.String: java.lang.String concat(java.lang.String)>", from: base, to: result, type: "taint" }
+  - { method: "<java.lang.String: java.lang.String concat(java.lang.String)>", from: 0, to: result, type: "taint" }
+  - { method: "<java.lang.String: int lastIndexOf(java.lang.String)>", from: base, to: result, type: "taint" }
   - { method: "<java.lang.String: void <init>(char[],int,int)>", from: 0, to: base, type: "taint" }
-  - { method: "<java.lang.String: java.lang.String substring(int,int)>", from: base, to: result, type: "java.lang.String" }
-  - { method: "<java.lang.StringBuilder: java.lang.StringBuilder append(java.lang.String)>", from: 0, to: result, type: "java.lang.String" }
-  - { method: "<java.lang.Class: java.lang.Class forName(java.lang.String)>", from: 0, to: result, type: "java.lang.Class" }
+  - { method: "<java.lang.String: java.lang.String substring(int,int)>", from: base, to: result, type: "taint" }
+  - { method: "<java.lang.StringBuilder: java.lang.StringBuilder append(java.lang.String)>", from: 0, to: result, type: "taint" }
+  - { method: "<java.lang.Class: java.lang.Class forName(java.lang.String)>", from: 0, to: result, type: "taint" }
   - { method: "<java.lang.Class: java.lang.reflect.Method[] getDeclaredMethods()>", from: base, to: result, type: "taint" }
   - { method: "<java.lang.reflect.Method: java.lang.String getName()>", from: base, to: result, type: "taint" }
-  - { method: "<java.util.Map: java.lang.Object put(java.lang.Object,java.lang.Object)>", from: 1, to: base, type: "taint" }
-  - { method: "<java.lang.Class: java.lang.Object newInstance()>", from: base, to: result, type: "java.lang.Object" }
+
+  - { method: "<java.lang.Class: java.lang.Object newInstance()>", from: base, to: result, type: "taint" }
   - { method: "<java.util.Map: java.lang.Object get(java.lang.Object)>", from: 0, to: result, type: "config" }
-  - { method: "<java.util.Map: java.lang.Object get(java.lang.Object)>", from: base, to: result, type: "taint" }
-#  - { method: "<java.util.List: java.lang.Object get(int)>", from: base, to: result, type: "java.lang.Object" }
-  - { method: "<java.util.List: boolean add(java.lang.Object)>", from: 0, to: base, type: "trans" }
-  - { method: "<java.util.List: java.lang.Object get(int)>", from: base, to: result, type: "trans" }
+
+#  - { method: "<java.util.Map: java.lang.Object put(java.lang.Object,java.lang.Object)>", from: 1, to: base, type: "collectionStore" }
+#  - { method: "<java.util.Map: java.lang.Object get(java.lang.Object)>", from: base, to: result, type: "collectionLoad" }
+#  - { method: "<java.util.List: boolean add(java.lang.Object)>", from: 0, to: base, type: "collectionStore" }
+#  - { method: "<java.util.List: java.lang.Object get(int)>", from: base, to: result, type: "collectionLoad" }
+
   - { method: "<java.io.StringReader: void <init>(java.lang.String)>", from: 0, to: base, type: "taint" }
   - { method: "<java.lang.StringBuffer: void <init>(java.lang.String)>", from: 0, to: base, type: "taint" }
   - { method: "<java.lang.String: void <init>(java.lang.StringBuffer)>", from: 0, to: base, type: "taint" }
   - { method: "<java.io.Reader: int read(char[],int,int)>", from: base, to: 0, type: "taint" }
-  - { method: "<java.lang.Class: java.lang.reflect.Field getField(java.lang.String)>", from: base, to: result, type: "java.lang.reflect.Field" }
-  - { method: "<java.util.regex.Pattern: java.util.regex.Matcher matcher(java.lang.CharSequence)>", from: 0, to: result, type: "java.util.regex.Matcher" }
-  - { method: "<java.util.regex.Matcher: java.lang.String group(int)>", from: base, to: result, type: "java.lang.String" }
-  - { method: "<javax.servlet.http.HttpServletRequest: java.lang.String getServletPath()>", from: base, to: result, type: "java.lang.String" }
+  - { method: "<java.lang.Class: java.lang.reflect.Field getField(java.lang.String)>", from: base, to: result, type: "taint" }
+  - { method: "<java.util.regex.Pattern: java.util.regex.Matcher matcher(java.lang.CharSequence)>", from: 0, to: result, type: "taint" }
+  - { method: "<java.util.regex.Matcher: java.lang.String group(int)>", from: base, to: result, type: "taint" }
+  - { method: "<javax.servlet.http.HttpServletRequest: java.lang.String getServletPath()>", from: base, to: result, type: "taint" }

@@ -63,6 +63,8 @@ public class Invoke extends DefinitionStmt<Var, InvokeExp>
      */
     private final JMethod container;
     private boolean resolved = false;
+    private boolean isCollectionStore = false;
+    private boolean isCollectionLoad = false;
 
     public void setResolved() {
         resolved = true;
@@ -83,7 +85,16 @@ public class Invoke extends DefinitionStmt<Var, InvokeExp>
             });
         }
         this.container = method;
+        if (!(invokeExp instanceof InvokeDynamic)) {
+            String methodRef = getMethodRef().toString();
+            if (methodRef.equals("<java.util.List: boolean add(java.lang.Object)>") || methodRef.equals("<java.util.Map: java.lang.Object put(java.lang.Object,java.lang.Object)>"))
+                isCollectionStore = true;
+            else if (methodRef.equals("<java.util.Map: java.lang.Object get(java.lang.Object)>") || methodRef.equals("<java.util.List: java.lang.Object get(int)>"))
+                isCollectionLoad = true;
+        }
     }
+    public boolean isCollectionStore() {return isCollectionStore;}
+    public boolean isCollectionLoad() {return isCollectionLoad;}
 
     public Invoke(JMethod method, InvokeExp invokeExp) {
         this(method, invokeExp, null);

@@ -118,4 +118,5 @@ public interface CSManager {
      * @return {@link Indexer} for {@link CSMethod} maintained by this manager.
      */
     Indexer<CSMethod> getMethodIndexer();
+
 }

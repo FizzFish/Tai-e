@@ -242,8 +242,6 @@ class TaintConfig {
                         int from = TaintTransfer.toInt(elem.get("from").asText());
                         int to = TaintTransfer.toInt(elem.get("to").asText());
                         String kind = elem.get("type").asText();
-                        if (!kind.equals("config") && !(kind.equals("trans")))
-                            kind = "taint";
                         transfers.add(new TaintTransfer(method, from, to, kind));
                     } else {
                         logger.warn("Cannot find taint-transfer method '{}'", methodSig);

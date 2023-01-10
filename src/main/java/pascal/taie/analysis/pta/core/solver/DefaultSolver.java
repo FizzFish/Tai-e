@@ -377,6 +377,7 @@ public class DefaultSolver implements Solver {
      *
      * @param arrayVar the array variable
      * @param pts      set of new discovered arrays pointed by the variable.
+     * arr[i] = y | list.add(e) | map.put(k, v)
      */
     private void processArrayStore(CSVar arrayVar, PointsToSet pts) {
         Context context = arrayVar.getContext();
@@ -388,7 +389,6 @@ public class DefaultSolver implements Solver {
                 pts.forEach(array -> {
                     // arr[i] = y  arr need be ArrayType kind
                     if (array.getObject().getType() instanceof ArrayType) {
-                        // donot transfer taint obj to array
                         ArrayIndex arrayIndex = csManager.getArrayIndex(array);
                         // we need type guard for array stores as Java arrays
                         // are covariant
@@ -456,6 +456,23 @@ public class DefaultSolver implements Solver {
         Context context = recv.getContext();
         Var var = recv.getVar();
         for (Invoke callSite : var.getInvokes()) {
+            if (callSite.isCollectionLoad()) {
+                // y = list.get(0) | y = map.get(k)
+                Var lvalue = callSite.getResult();
+                CSVar to = csManager.getCSVar(context, lvalue);
+                pts.forEach(array -> {
+                    ArrayIndex arrayIndex = csManager.getArrayIndex(array);
+                    addPFGEdge(arrayIndex, to, PointerFlowEdge.Kind.ARRAY_LOAD);
+                });
+            } else if (callSite.isCollectionStore()) {
+                // list.add(e) | map.put(k, v)
+                Var rvalue = callSite.getInvokeExp().getLastArg();
+                CSVar from = csManager.getCSVar(context, rvalue);
+                pts.forEach(array -> {
+                    ArrayIndex arrayIndex = csManager.getArrayIndex(array);
+                    addPFGEdge(from, arrayIndex, PointerFlowEdge.Kind.ARRAY_STORE);
+                });
+            }
             pts.forEach(recvObj -> {
                 Obj obj = recvObj.getObject();
                 Type type = obj.getType();
@@ -468,8 +485,11 @@ public class DefaultSolver implements Solver {
                     MethodRef methodRef = callSite.getMethodRef();
                     // taintObj polymorphism for application method
                     if (methodRef.getDeclaringClass().isApplication()) {
-                        if (!callSite.isResolved()) // one time enough
+                        if (!callSite.isResolved()) {// one time enough
                             methods = CallGraphs.resolve(var.getType(), callSite);
+                            if (methods.size() > 0)
+                                callSite.setResolved();
+                        }
                     } else {
                         JMethod callee = methodRef.resolveNullable();
                         if (callee != null) {
@@ -497,7 +517,6 @@ public class DefaultSolver implements Solver {
                             Transfer callTransfer = new CallTransfer(recvObj.getObject().isTaint());
                             addPFGEdge(recv, CSThis, PointerFlowEdge.Kind.PARAMETER_PASSING, callTransfer);
                         }
-                        callSite.setResolved();
                     }
                 });
             });
