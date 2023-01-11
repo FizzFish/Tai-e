@@ -36,8 +36,8 @@ import java.util.Optional;
  */
 public class GenObj extends Obj {
 
-    private final Stmt allocSite;
-    private final Type type;
+    protected final Stmt allocSite;
+    protected final Type type;
     private final JMethod container;
 
     GenObj(Stmt allocSite, Type type) {

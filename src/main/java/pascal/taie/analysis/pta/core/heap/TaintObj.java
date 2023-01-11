@@ -1,49 +1,31 @@
 package pascal.taie.analysis.pta.core.heap;
 
 import pascal.taie.analysis.pta.core.cs.element.Pointer;
+import pascal.taie.ir.stmt.Invoke;
 import pascal.taie.ir.stmt.Stmt;
 import pascal.taie.language.classes.JMethod;
 import pascal.taie.language.type.Type;
 import java.util.Optional;
 
-public class TaintObj extends Obj{
+public class TaintObj extends GenObj{
     private Obj parent;
-    private final Type type;
-    private String stmt;
-    private JMethod container;
     private int kind = 0;
+    private String trace;
 
-    public TaintObj(Obj parent, Type type, String stmt) {
-        this.type = type;
+    public TaintObj(Obj parent, Type type, Stmt allocSite) {
+        super(allocSite, type);
         this.parent = parent;
-        this.stmt = stmt;
-        this.container = null;
-        if (parent == null || (parent != null && parent.isTaint()))
+        if (parent.isTaint())
             kind = 1;
+        trace = allocSite.format();
+    }
+    public TaintObj(JMethod method, Type type) {
+        super(null, type);
+        parent = null;
+        kind = 1;
+        trace = method.getSignature();
     }
 
-    public Type getType() {
-        return type;
-    }
-
-    public Object getAllocation() {
-        return stmt;
-    }
-
-    @Override
-    public Optional<JMethod> getContainerMethod() {
-        return Optional.ofNullable(container);
-    }
-
-    @Override
-    public Type getContainerType() {
-        return type;
-    }
-
-    @Override
-    public boolean isPolymorphism() {
-        return true;
-    }
     public boolean isTaint() {
         return kind == 1;
     }
@@ -57,7 +39,8 @@ public class TaintObj extends Obj{
         TaintObj cur = this;
         String out = "";
         do {
-            out += String.format("%s: %s\n", cur.type.toString(), cur.stmt);
+            String stmt = cur.allocSite == null ? "begin" : cur.allocSite.format();
+            out += String.format("%s: %s\n", cur.type.toString(), stmt);
             cur = (TaintObj) cur.parent;
         } while (cur != null);
         return out;

@@ -68,4 +68,6 @@ public interface Stmt extends Indexable {
     boolean canFallThrough();
 
     <T> T accept(StmtVisitor<T> visitor);
+
+    default String format() {return toString();}
 }

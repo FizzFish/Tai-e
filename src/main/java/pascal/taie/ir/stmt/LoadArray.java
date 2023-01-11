@@ -24,6 +24,7 @@ package pascal.taie.ir.stmt;
 
 import pascal.taie.ir.exp.ArrayAccess;
 import pascal.taie.ir.exp.Var;
+import pascal.taie.language.classes.JMethod;
 
 /**
  * Representation of load array statement, e.g., x = a[..].
@@ -43,5 +44,12 @@ public class LoadArray extends ArrayStmt<Var, ArrayAccess> {
     @Override
     public <T> T accept(StmtVisitor<T> visitor) {
         return visitor.visit(this);
+    }
+
+    public String format() {
+        JMethod method = getLValue().getMethod();
+        String stmt = String.format("[%s|%s|%s]",
+                method.getDeclaringClass(), method.getName(), this);
+        return stmt;
     }
 }

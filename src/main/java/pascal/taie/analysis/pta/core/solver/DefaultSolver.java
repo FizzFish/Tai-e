@@ -334,7 +334,7 @@ public class DefaultSolver implements Solver {
                     Obj obj = baseObj.getObject();
                     // y = taint.f; y<=taint
                     if (obj instanceof TaintObj && isBasicField(field)) {
-                        TaintObj taint = taintManager.makeTaint(obj, field.getType(), load.toString());
+                        TaintObj taint = taintManager.makeTaint(obj, field.getType(), load);
                         addPointsTo(to, csManager.getCSObj(contextSelector.getEmptyContext(), taint));
                     }
                     InstanceField instField = csManager.getInstanceField(
@@ -393,9 +393,7 @@ public class DefaultSolver implements Solver {
                                 PointerFlowEdge.Kind.ARRAY_STORE, arrayIndex.getType());
                     }
                 });
-                String stmt = String.format("[%s|%s|%s]",
-                        var.getMethod().getDeclaringClass(), var.getMethod().getName(), store.toString());
-                TaintTrans taintTrans = new TaintTrans(rvalue.getType(), this, stmt, 1);
+                TaintTrans taintTrans = new TaintTrans(rvalue.getType(), this, store, 1);
                 addPFGEdge(from, arrayVar, PointerFlowEdge.Kind.TAINT, taintTrans);
             }
         }
@@ -420,9 +418,7 @@ public class DefaultSolver implements Solver {
                     addPFGEdge(arrayIndex, to, PointerFlowEdge.Kind.ARRAY_LOAD);
                 });
                 // y = arr[i]; arr => y
-                String stmt = String.format("[%s|%s|%s]",
-                        var.getMethod().getDeclaringClass(), var.getMethod().getName(), load.toString());
-                TaintTrans taintTrans = new TaintTrans(lvalue.getType(), this, stmt, 1);
+                TaintTrans taintTrans = new TaintTrans(lvalue.getType(), this, load, 1);
                 addPFGEdge(arrayVar, to, PointerFlowEdge.Kind.TAINT, taintTrans);
             }
 
@@ -464,7 +460,7 @@ public class DefaultSolver implements Solver {
                 if (callSite.isConfigureLoad()) {
                     Var from = callSite.getInvokeExp().getArg(0);
                     CSVar csFrom = csManager.getCSVar(context, from);
-                    TaintTrans taintTrans = new TaintTrans(to.getType(), this, callSite.format(), 0);
+                    TaintTrans taintTrans = new TaintTrans(to.getType(), this, callSite, 0);
                     addPFGEdge(csFrom, to, PointerFlowEdge.Kind.TAINT, taintTrans);
                 }
             } else if (callSite.isCollectionStore()) {

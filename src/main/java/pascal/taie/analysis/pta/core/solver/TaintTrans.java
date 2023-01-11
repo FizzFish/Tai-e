@@ -27,23 +27,24 @@ import pascal.taie.analysis.pta.core.cs.element.CSObj;
 import pascal.taie.analysis.pta.core.heap.TaintObj;
 import pascal.taie.analysis.pta.plugin.taint.TaintManager;
 import pascal.taie.analysis.pta.pts.PointsToSet;
+import pascal.taie.ir.stmt.Stmt;
 import pascal.taie.language.type.Type;
 
 import java.util.function.Supplier;
 
 public class TaintTrans implements Transfer {
     private final Type type;
-    private final String stmt;
+    private final Stmt allocation;
     private final Solver solver;
     private final int upper;
     private boolean needPropagate;
     private int lower = 0;
     // 0: recvall; 1: only recv taint
-    public TaintTrans(Type type, Solver solver, String stmt, int kind) {
+    public TaintTrans(Type type, Solver solver, Stmt allocation, int kind) {
         this.type = type;
         this.solver = solver;
         this.needPropagate = true;
-        this.stmt = stmt;
+        this.allocation = allocation;
         this.upper = kind;
     }
 
@@ -73,7 +74,7 @@ public class TaintTrans implements Transfer {
                 if (taintKind < lower)
                     continue;
                 lower = taintKind + 1;
-                TaintObj newTaint = solver.getTaintManager().makeTaint(taint, type, stmt);
+                TaintObj newTaint = solver.getTaintManager().makeTaint(taint, type, allocation);
                 taintKind = newTaint.getKind();
                 if (taintKind > upper) // may generate config taint object
                     newTaint.setKind(upper);

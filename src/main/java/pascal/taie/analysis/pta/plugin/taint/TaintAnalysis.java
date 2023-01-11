@@ -107,7 +107,6 @@ public class TaintAnalysis implements Plugin {
         if (!entryTaint)
             return;
         JMethod entry = csEntry.getMethod();
-        Context ctx = csEntry.getContext();
 
         for (int i : sources.get(entry)) {
             Var thisVar = entry.getIR().getThis();
@@ -116,8 +115,7 @@ public class TaintAnalysis implements Plugin {
             List<Var> params = entry.getIR().getParams();
             Var param = params.get(i);
             Type type = param.getType();
-            Pointer pointer = csManager.getCSVar(ctx, param);
-            Obj taint = manager.makeTaint(null, type, entry.getSignature()+ " begin");
+            Obj taint = manager.makeTaint(entry, type);
             solver.addVarPointsTo(csEntry.getContext(), param, emptyContext, taint);
             entryTaint = false;
         }
@@ -128,7 +126,6 @@ public class TaintAnalysis implements Plugin {
         Invoke callSite = edge.getCallSite().getCallSite();
         JMethod caller = edge.getCallee().getMethod(); // callSite.getMethodRef().resolve();
         Context ctx = edge.getCallSite().getContext();
-        String stmt = callSite.format();
         // generate taint value from source call
         // process sinks
         config.getSinks().forEach(sink -> {
@@ -152,8 +149,9 @@ public class TaintAnalysis implements Plugin {
                 // propagate when csFrom contains taintObj
                 // another resolve: varTransfers.put(from, new ThreePair<>(to, type, stmt));
                 CSVar csFrom = csManager.getCSVar(ctx, from);
-                TaintTrans taintTrans = new TaintTrans(toType, solver, stmt, kind);
-                solver.addPFGEdge(csFrom, csManager.getCSVar(ctx, to), PointerFlowEdge.Kind.TAINT, taintTrans);
+                CSVar csTo = csManager.getCSVar(ctx, to);
+                TaintTrans taintTrans = new TaintTrans(toType, solver, callSite, kind);
+                solver.addPFGEdge(csFrom, csTo, PointerFlowEdge.Kind.TAINT, taintTrans);
             }
         });
 

@@ -50,8 +50,11 @@ public class TaintManager {
      * @param type   type of the taint object
      * @return the taint object for given source and type.
      */
-    public TaintObj makeTaint(Obj parent, Type type, String stmt) {
-        return heapModel.getTaintObj(parent, type, stmt);
+    public TaintObj makeTaint(Obj parent, Type type, Stmt allocation) {
+        return heapModel.getTaintObj(parent, type, allocation);
+    }
+    public TaintObj makeTaint(JMethod method, Type type) {
+        return heapModel.getTaintObj(method, type);
     }
     GenObj makeGen(Stmt stmt, Type type) {
         return heapModel.getGenObj(stmt, type);
