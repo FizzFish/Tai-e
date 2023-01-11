@@ -188,6 +188,14 @@ public class PointerAnalysisResultImpl extends AbstractResultHolder
                         .stream()
                         .flatMap(Pointer::objects)));
     }
+    public boolean containTaint(Var var) {
+        Set<Obj> objs = getPointsToSet(var);
+        for (Obj obj: objs) {
+            if (obj.isTaint())
+                return true;
+        }
+        return false;
+    }
 
     @Override
     public Set<Obj> getPointsToSet(InstanceFieldAccess access) {

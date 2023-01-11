@@ -191,10 +191,9 @@ public class TaintAnalysis implements Plugin {
         MultiMap<JMethod, Var> sinkResult = Maps.newMultiMap();
         // clear unTaint sinkVar
         sinkInfo.forEach((method, var) -> {
-            long count = result.getPointsToSet(var).stream().filter(manager::isTaint).count();
-            if (count > 0) {
+            if (result.containTaint(var)) {
                 sinkResult.put(method, var);
-                System.out.printf("Find %d sink: %s with %s in %s\n", count, method, var.toString(), var.getMethod());
+                System.out.printf("Find sinks: %s with %s in %s\n", method, var, var.getMethod());
                 result.getPointsToSet(var).stream().filter(manager::isTaint).forEach(sink -> {
                     System.out.println(sink);
                 });
@@ -222,7 +221,7 @@ public class TaintAnalysis implements Plugin {
     private void printTaint(PointerAnalysisResult result) {
         Map<JMethod, List> taints = new HashMap();
         result.getVars().forEach(var -> {
-            if (result.getPointsToSet(var).stream().filter(manager::isTaint).count() > 0){
+            if (result.containTaint(var)){
                 JMethod method = var.getMethod();
                 String name = var.getName();
                 if (taints.containsKey(method)) {

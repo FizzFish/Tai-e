@@ -105,6 +105,7 @@ public interface PointerAnalysisResult extends ResultHolder {
      * @return set of Obj pointed to by var.
      */
     Set<Obj> getPointsToSet(Var var);
+    boolean containTaint(Var var);
 
     /**
      * @return set of Obj pointed to by field access.
