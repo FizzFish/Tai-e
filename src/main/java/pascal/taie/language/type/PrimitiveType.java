@@ -22,6 +22,8 @@
 
 package pascal.taie.language.type;
 
+import pascal.taie.language.classes.JField;
+
 public enum PrimitiveType implements Type {
 
     INT("int"),
@@ -52,6 +54,9 @@ public enum PrimitiveType implements Type {
             }
         }
         return false;
+    }
+    public boolean isBasicField() {
+        return true;
     }
 
     /**

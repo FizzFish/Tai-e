@@ -29,7 +29,9 @@ public record ArrayType(Type baseType, int dimensions, Type elementType)
     public String getName() {
         return elementType + "[]";
     }
-
+    public boolean isArrayOrList() {
+        return true;
+    }
     @Override
     public String toString() {
         return getName();

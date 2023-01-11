@@ -28,10 +28,14 @@ import org.neo4j.driver.*;
 import pascal.taie.analysis.graph.callgraph.Edge;
 import pascal.taie.analysis.pta.PointerAnalysisResult;
 import pascal.taie.analysis.pta.core.cs.context.Context;
-import pascal.taie.analysis.pta.core.cs.element.*;
+import pascal.taie.analysis.pta.core.cs.element.CSCallSite;
+import pascal.taie.analysis.pta.core.cs.element.CSManager;
+import pascal.taie.analysis.pta.core.cs.element.CSMethod;
+import pascal.taie.analysis.pta.core.cs.element.CSVar;
 import pascal.taie.analysis.pta.core.heap.Obj;
-import pascal.taie.analysis.pta.core.heap.TaintObj;
-import pascal.taie.analysis.pta.core.solver.*;
+import pascal.taie.analysis.pta.core.solver.PointerFlowEdge;
+import pascal.taie.analysis.pta.core.solver.Solver;
+import pascal.taie.analysis.pta.core.solver.TaintTrans;
 import pascal.taie.analysis.pta.plugin.Plugin;
 import pascal.taie.analysis.pta.pts.PointsToSet;
 import pascal.taie.ir.IRPrinter;
@@ -49,7 +53,6 @@ import pascal.taie.util.collection.ThreePair;
 import java.util.*;
 
 import static org.neo4j.driver.Values.parameters;
-import static pascal.taie.analysis.pta.core.solver.PointerFlowEdge.Kind.*;
 
 public class TaintAnalysis implements Plugin {
 

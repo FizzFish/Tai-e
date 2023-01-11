@@ -22,13 +22,10 @@
 
 package pascal.taie.analysis.pta.core.heap;
 
-import pascal.taie.ir.stmt.New;
 import pascal.taie.ir.stmt.Stmt;
 import pascal.taie.language.classes.JMethod;
-import pascal.taie.language.type.ReferenceType;
 import pascal.taie.language.type.Type;
 
-import java.awt.*;
 import java.util.Optional;
 
 /**

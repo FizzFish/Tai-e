@@ -43,7 +43,17 @@ public class ClassType implements ReferenceType {
     public String getName() {
         return name;
     }
-
+    public boolean isArrayOrList() {
+        if (name.startsWith("java.util"))
+            return true;
+        return false;
+    }
+    public boolean isBasicField() {
+        // java.lang.String, java.util.List/Map
+        if (name.startsWith("java.lang") || name.startsWith("java.util"))
+            return true;
+        return false;
+    }
     public JClass getJClass() {
         if (jclass == null) {
             jclass = loader.loadClass(name);

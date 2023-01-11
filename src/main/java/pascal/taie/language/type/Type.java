@@ -25,4 +25,6 @@ package pascal.taie.language.type;
 public interface Type {
 
     String getName();
+    default boolean isArrayOrList() {return false;}
+    default boolean isBasicField() {return false;}
 }

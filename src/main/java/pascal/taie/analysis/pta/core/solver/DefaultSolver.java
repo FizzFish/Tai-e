@@ -332,7 +332,7 @@ public class DefaultSolver implements Solver {
                 pts.forEach(baseObj -> {
                     Obj obj = baseObj.getObject();
                     // y = taint.f; y<=taint
-                    if (obj instanceof TaintObj taint && isBasicField(field)) {
+                    if (obj instanceof TaintObj taint && field.getType().isBasicField()) {
                         TaintObj newTaint = taintManager.makeTaint(taint, field.getType(), load);
                         addPointsTo(to, csManager.getCSObj(contextSelector.getEmptyContext(), newTaint));
                     }
@@ -340,32 +340,12 @@ public class DefaultSolver implements Solver {
                             baseObj, field);
                     addPFGEdge(instField, to, PointerFlowEdge.Kind.INSTANCE_LOAD);
                     // tmp = this.arr|list
-                    if (isArrayOrList(toVar)) {
+                    if (toVar.getType().isArrayOrList()) {
                         addPFGEdge(to, instField, PointerFlowEdge.Kind.INSTANCE_LOAD_ARR);
                     }
                 });
             }
         }
-    }
-    private boolean isBasicField(JField filed) {
-        Type type = filed.getType();
-        String typeName = type.getName();
-        if (PrimitiveType.isPrimitiveType(typeName))
-            return true;
-        // java.lang.String, java.util.List/Map
-        if (typeName.startsWith("java.lang") || typeName.startsWith("java.util"))
-            return true;
-        return false;
-    }
-    private boolean isArrayOrList(Var var) {
-        Type type = var.getType();
-        if (type instanceof ArrayType)
-            return true;
-        if (type instanceof ClassType classType) {
-            if (classType.getName().startsWith("java.util"))
-                return true;
-        }
-        return false;
     }
 
     /**
@@ -718,7 +698,7 @@ public class DefaultSolver implements Solver {
                     CSVar from = csManager.getCSVar(context, rvalue);
                     CSVar to = csManager.getCSVar(context, stmt.getLValue());
                     addPFGEdge(from, to, PointerFlowEdge.Kind.LOCAL_ASSIGN);
-                    if (isArrayOrList(rvalue))
+                    if (rvalue.getType().isArrayOrList())
                         addPFGEdge(to, from, PointerFlowEdge.Kind.LOCAL_ASSIGN);
                 }
                 return null;
