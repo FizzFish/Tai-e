@@ -25,6 +25,7 @@ package pascal.taie.ir.stmt;
 import pascal.taie.ir.exp.FieldAccess;
 import pascal.taie.ir.exp.InstanceFieldAccess;
 import pascal.taie.ir.exp.Var;
+import pascal.taie.language.classes.JMethod;
 
 /**
  * Representation of following load field statements:
@@ -47,7 +48,9 @@ public class LoadField extends FieldStmt<Var, FieldAccess> {
     public FieldAccess getFieldAccess() {
         return getRValue();
     }
-
+    public JMethod getContainer() {
+        return getLValue().getMethod();
+    }
     @Override
     public <T> T accept(StmtVisitor<T> visitor) {
         return visitor.visit(this);

@@ -22,24 +22,10 @@
 
 package pascal.taie.ir.stmt;
 
-import pascal.taie.World;
 import pascal.taie.analysis.pta.core.heap.GenObj;
-import pascal.taie.ir.exp.InvokeDynamic;
-import pascal.taie.ir.exp.InvokeExp;
-import pascal.taie.ir.exp.InvokeInstanceExp;
-import pascal.taie.ir.exp.InvokeInterface;
-import pascal.taie.ir.exp.InvokeSpecial;
-import pascal.taie.ir.exp.InvokeStatic;
-import pascal.taie.ir.exp.InvokeVirtual;
-import pascal.taie.ir.exp.LValue;
-import pascal.taie.ir.exp.RValue;
-import pascal.taie.ir.exp.Var;
+import pascal.taie.ir.exp.*;
 import pascal.taie.ir.proginfo.MethodRef;
-import pascal.taie.language.classes.ClassHierarchy;
-import pascal.taie.language.classes.JClass;
 import pascal.taie.language.classes.JMethod;
-import pascal.taie.language.classes.Subsignature;
-import pascal.taie.language.type.ClassType;
 import pascal.taie.language.type.Type;
 import pascal.taie.util.collection.CollectionUtils;
 
@@ -176,9 +162,6 @@ public class Invoke extends DefinitionStmt<Var, InvokeExp>
         return invokeExp instanceof InvokeDynamic;
     }
 
-    public boolean isJDK() {
-        return getMethodRef().getDeclaringClass().getName().startsWith("java");
-    }
     public JMethod getContainer() {
         return container;
     }

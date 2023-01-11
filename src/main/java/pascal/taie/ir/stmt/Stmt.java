@@ -24,6 +24,7 @@ package pascal.taie.ir.stmt;
 
 import pascal.taie.ir.exp.LValue;
 import pascal.taie.ir.exp.RValue;
+import pascal.taie.language.classes.JMethod;
 import pascal.taie.util.Indexable;
 
 import java.util.List;
@@ -68,6 +69,6 @@ public interface Stmt extends Indexable {
     boolean canFallThrough();
 
     <T> T accept(StmtVisitor<T> visitor);
-
+    default JMethod getContainer() {return null;}
     default String format() {return toString();}
 }

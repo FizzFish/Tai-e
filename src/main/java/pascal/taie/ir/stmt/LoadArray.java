@@ -45,7 +45,9 @@ public class LoadArray extends ArrayStmt<Var, ArrayAccess> {
     public <T> T accept(StmtVisitor<T> visitor) {
         return visitor.visit(this);
     }
-
+    public JMethod getContainer() {
+        return getLValue().getMethod();
+    }
     public String format() {
         JMethod method = getLValue().getMethod();
         String stmt = String.format("[%s|%s|%s]",

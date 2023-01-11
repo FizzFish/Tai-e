@@ -40,7 +40,7 @@ public class GenObj extends Obj {
     GenObj(Stmt allocSite, Type type) {
         this.allocSite = allocSite;
         this.type = type;
-        this.container = null;
+        this.container = allocSite == null ? null : allocSite.getContainer();
     }
 
     @Override

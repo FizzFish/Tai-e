@@ -25,6 +25,7 @@ package pascal.taie.ir.stmt;
 import pascal.taie.ir.exp.FieldAccess;
 import pascal.taie.ir.exp.InstanceFieldAccess;
 import pascal.taie.ir.exp.Var;
+import pascal.taie.language.classes.JMethod;
 
 /**
  * Representation of following store field statements:
@@ -47,7 +48,9 @@ public class StoreField extends FieldStmt<FieldAccess, Var> {
     public FieldAccess getFieldAccess() {
         return getLValue();
     }
-
+    public JMethod getContainer() {
+        return getRValue().getMethod();
+    }
     @Override
     public <T> T accept(StmtVisitor<T> visitor) {
         return visitor.visit(this);

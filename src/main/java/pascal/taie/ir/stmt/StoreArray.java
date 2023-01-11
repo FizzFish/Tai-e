@@ -45,6 +45,9 @@ public class StoreArray extends ArrayStmt<ArrayAccess, Var> {
     public <T> T accept(StmtVisitor<T> visitor) {
         return visitor.visit(this);
     }
+    public JMethod getContainer() {
+        return getRValue().getMethod();
+    }
     public String format() {
         JMethod method = getRValue().getMethod();
         String stmt = String.format("[%s|%s|%s]",
