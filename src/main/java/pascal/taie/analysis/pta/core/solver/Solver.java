@@ -121,9 +121,6 @@ public interface Solver {
      * cast/arrystore/lambda/reflection
      */
     default void addPFGEdge(Pointer source, Pointer target, PointerFlowEdge.Kind kind, Type type) {
-//        if (kind == TAINT)
-//            addPFGEdge(source, target, kind, new TaintTrans(type, this));
-//        else
         addPFGEdge(source, target, kind, new TypeFilter(type, this));
     }
 

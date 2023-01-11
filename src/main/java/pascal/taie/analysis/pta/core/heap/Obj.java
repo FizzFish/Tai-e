@@ -78,9 +78,7 @@ public abstract class Obj implements Indexable {
      * For special objects, the return values of this method are also special.
      */
     public abstract Type getContainerType();
-    public boolean isPolymorphism() {
-        return polymorphism;
-    }
+
     public boolean isTaint() {
         return false;
     }

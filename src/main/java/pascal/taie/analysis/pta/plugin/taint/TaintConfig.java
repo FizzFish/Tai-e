@@ -33,6 +33,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import pascal.taie.analysis.pta.core.heap.GenObj;
 import pascal.taie.config.ConfigException;
 import pascal.taie.language.classes.ClassHierarchy;
 import pascal.taie.language.classes.JMethod;
@@ -241,8 +242,8 @@ class TaintConfig {
                         // the class hierarchy, just ignore it.
                         int from = TaintTransfer.toInt(elem.get("from").asText());
                         int to = TaintTransfer.toInt(elem.get("to").asText());
-                        String kind = elem.get("type").asText();
-                        transfers.add(new TaintTransfer(method, from, to, kind));
+//                        String kind = elem.get("type").asText();
+                        transfers.add(new TaintTransfer(method, from, to, GenObj.Kind.TAINT));
                     } else {
                         logger.warn("Cannot find taint-transfer method '{}'", methodSig);
                     }

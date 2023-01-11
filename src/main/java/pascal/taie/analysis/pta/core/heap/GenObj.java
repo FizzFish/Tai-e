@@ -67,15 +67,15 @@ public class GenObj extends Obj {
     }
 
     @Override
-    public boolean isPolymorphism() {
-        return true;
-    }
-
-    @Override
     public String toString() {
         return String.format("GenObj[%s]", type);
     }
+
+    public Kind getKind() {
+        return Kind.GEN;
+    }
     public enum Kind {
+        OTHER,
         GEN,
         CONFIG,
         TAINT

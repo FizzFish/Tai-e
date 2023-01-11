@@ -141,16 +141,13 @@ public class TaintAnalysis implements Plugin {
             // when transfer to result variable, and the call site
             // does not have result variable, then "to" is null.
             if (to != null) {
-                int kind = 1;
-                if (transfer.kind().equals("config"))
-                    kind = 0;
                 Type toType = to.getType();
 
                 // propagate when csFrom contains taintObj
                 // another resolve: varTransfers.put(from, new ThreePair<>(to, type, stmt));
                 CSVar csFrom = csManager.getCSVar(ctx, from);
                 CSVar csTo = csManager.getCSVar(ctx, to);
-                TaintTrans taintTrans = new TaintTrans(toType, solver, callSite, kind);
+                TaintTrans taintTrans = new TaintTrans(toType, solver, callSite, transfer.kind());
                 solver.addPFGEdge(csFrom, csTo, PointerFlowEdge.Kind.TAINT, taintTrans);
             }
         });

@@ -23,6 +23,7 @@
 package pascal.taie.ir.stmt;
 
 import pascal.taie.World;
+import pascal.taie.analysis.pta.core.heap.GenObj;
 import pascal.taie.ir.exp.InvokeDynamic;
 import pascal.taie.ir.exp.InvokeExp;
 import pascal.taie.ir.exp.InvokeInstanceExp;
@@ -75,7 +76,7 @@ public class Invoke extends DefinitionStmt<Var, InvokeExp>
     private boolean isCollectionStore = false;
     private boolean isCollectionLoad = false;
     private boolean isConfigureLoad = false;
-    private int state = 0;
+    private GenObj.Kind genObjLevel = GenObj.Kind.OTHER;
 
     public void setResolved() {
         resolved = true;
@@ -83,13 +84,6 @@ public class Invoke extends DefinitionStmt<Var, InvokeExp>
     public boolean isResolved() {
         return resolved;
     }
-    public void setTaintResolved() {
-        taintResolved = true;
-    }
-    public boolean isTaintResolved() {
-        return taintResolved;
-    }
-
     public Invoke(JMethod method, InvokeExp invokeExp, @Nullable Var result) {
         this.invokeExp = invokeExp;
         this.result = result;
@@ -114,10 +108,12 @@ public class Invoke extends DefinitionStmt<Var, InvokeExp>
             }
         }
     }
-    public Set<JMethod> resolve(Type type) {
+    public Set<JMethod> resolve(Type type, GenObj genObj) {
         Set<JMethod> methods = new HashSet();
-        if (!isDynamic())
-            methods = getMethodRef().getCacheMethods(type, this);
+        if (genObj.getKind().compareTo(genObjLevel) <= 0 || isDynamic())
+            return methods;
+        genObjLevel = genObj.getKind();
+        methods = getMethodRef().getCacheMethods(type, this);
         return methods;
     }
     public boolean isCollectionStore() {return isCollectionStore;}

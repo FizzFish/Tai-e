@@ -24,8 +24,8 @@ package pascal.taie.analysis.pta.core.solver;
 
 import pascal.taie.analysis.pta.core.cs.context.Context;
 import pascal.taie.analysis.pta.core.cs.element.CSObj;
+import pascal.taie.analysis.pta.core.heap.GenObj.Kind;
 import pascal.taie.analysis.pta.core.heap.TaintObj;
-import pascal.taie.analysis.pta.plugin.taint.TaintManager;
 import pascal.taie.analysis.pta.pts.PointsToSet;
 import pascal.taie.ir.stmt.Stmt;
 import pascal.taie.language.type.Type;
@@ -36,20 +36,20 @@ public class TaintTrans implements Transfer {
     private final Type type;
     private final Stmt allocation;
     private final Solver solver;
-    private final int upper;
+    private final Kind upper;
     private boolean needPropagate;
-    private int lower = 0;
+    private Kind lower = Kind.GEN;
     // 0: recvall; 1: only recv taint
-    public TaintTrans(Type type, Solver solver, Stmt allocation, int kind) {
+    public TaintTrans(Type type, Solver solver, Stmt allocation, Kind upper) {
         this.type = type;
         this.solver = solver;
         this.needPropagate = true;
         this.allocation = allocation;
-        this.upper = kind;
+        this.upper = upper;
     }
 
     public boolean hasTaint() {
-        return upper == 1 && !needPropagate;
+        return upper == Kind.TAINT && !needPropagate;
     }
     @Override
     public boolean needPropagate() {
@@ -69,19 +69,18 @@ public class TaintTrans implements Transfer {
          */
         for (CSObj csObj : input) {
             if (csObj.getObject() instanceof TaintObj taint) {
-                int taintKind = taint.getKind();
+                Kind objKind = taint.getKind();
                 // transfer condition
-                if (taintKind < lower)
+                if (objKind.compareTo(lower) <= 0)
                     continue;
-                lower = taintKind + 1;
+                lower = objKind;
                 TaintObj newTaint = solver.getTaintManager().makeTaint(taint, type, allocation);
-                taintKind = newTaint.getKind();
-                if (taintKind > upper) // may generate config taint object
+                if (upper == Kind.CONFIG)
                     newTaint.setKind(upper);
                 CSObj csTaint = solver.getCSManager().getCSObj(emptyContext, newTaint);
                 result.addObject(csTaint);
 
-                if (lower > upper) {
+                if (lower.compareTo(upper) >= 0) {
                     needPropagate = false;
                     break;
                 }

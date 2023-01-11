@@ -251,7 +251,6 @@ public class DefaultSolver implements Solver {
                     break;
                 }
             }
-
         } while(true);
         plugin.onFinish();
     }
@@ -393,7 +392,7 @@ public class DefaultSolver implements Solver {
                                 PointerFlowEdge.Kind.ARRAY_STORE, arrayIndex.getType());
                     }
                 });
-                TaintTrans taintTrans = new TaintTrans(rvalue.getType(), this, store, 1);
+                TaintTrans taintTrans = new TaintTrans(rvalue.getType(), this, store, GenObj.Kind.TAINT);
                 addPFGEdge(from, arrayVar, PointerFlowEdge.Kind.TAINT, taintTrans);
             }
         }
@@ -418,7 +417,7 @@ public class DefaultSolver implements Solver {
                     addPFGEdge(arrayIndex, to, PointerFlowEdge.Kind.ARRAY_LOAD);
                 });
                 // y = arr[i]; arr => y
-                TaintTrans taintTrans = new TaintTrans(lvalue.getType(), this, load, 1);
+                TaintTrans taintTrans = new TaintTrans(lvalue.getType(), this, load, GenObj.Kind.TAINT);
                 addPFGEdge(arrayVar, to, PointerFlowEdge.Kind.TAINT, taintTrans);
             }
 
@@ -460,7 +459,7 @@ public class DefaultSolver implements Solver {
                 if (callSite.isConfigureLoad()) {
                     Var from = callSite.getInvokeExp().getArg(0);
                     CSVar csFrom = csManager.getCSVar(context, from);
-                    TaintTrans taintTrans = new TaintTrans(to.getType(), this, callSite, 0);
+                    TaintTrans taintTrans = new TaintTrans(to.getType(), this, callSite, GenObj.Kind.CONFIG);
                     addPFGEdge(csFrom, to, PointerFlowEdge.Kind.TAINT, taintTrans);
                 }
             } else if (callSite.isCollectionStore()) {
@@ -476,25 +475,18 @@ public class DefaultSolver implements Solver {
                     Obj obj = recvObj.getObject();
                     Type type = obj.getType();
                     Set<JMethod> methods = new HashSet<>();
-
-                    if (!obj.isPolymorphism()) {
-                        // resolve callee
-                        methods.add(CallGraphs.resolveCallee(type, callSite));
-                    } else {
+                    if (obj instanceof GenObj genObj) {
                         MethodRef methodRef = callSite.getMethodRef();
-                        // GenObj/ConfigObj/TaintObj
                         if (methodRef.getDeclaringClass().isApplication()) {
-                            if (!callSite.isTaintResolved()) {// one time enough
-                                methods = callSite.resolve(var.getType());
-                                if (methods.size() > 0)
-                                    callSite.setTaintResolved();
-                            }
+                            methods = callSite.resolve(var.getType(), genObj);
                         } else {
                             JMethod callee = methodRef.resolveNullable();
                             if (callee != null) {
                                 methods.add(callee);
                             }
                         }
+                    } else {
+                        methods.add(CallGraphs.resolveCallee(type, callSite));
                     }
                     if (methods.isEmpty())
                         plugin.onUnresolvedCall(recvObj, context, callSite);
@@ -828,9 +820,6 @@ public class DefaultSolver implements Solver {
             PointsToSet targetSet = transfer.apply(edge, getPointsToSetOf(source));
             if (!targetSet.isEmpty()) {
                 addPointsTo(target, targetSet);
-//                if (source instanceof InstanceField instanceField && targetSet.containTaint()) {
-//                    instanceField.getBase().getObject().setPolymorphism(true);
-//                }
             }
         }
     }

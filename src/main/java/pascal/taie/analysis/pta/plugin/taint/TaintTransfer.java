@@ -22,9 +22,8 @@
 
 package pascal.taie.analysis.pta.plugin.taint;
 
-import pascal.taie.ir.stmt.Invoke;
+import pascal.taie.analysis.pta.core.heap.GenObj;
 import pascal.taie.language.classes.JMethod;
-import pascal.taie.language.type.Type;
 
 /**
  * Represents taint transfer between argument/base/return variables
@@ -36,7 +35,7 @@ import pascal.taie.language.type.Type;
  *     <li>type: the type of the transferred taint object
  * </ul>
  */
-record TaintTransfer(JMethod method, int from, int to, String kind) {
+record TaintTransfer(JMethod method, int from, int to, GenObj.Kind kind) {
 
     /**
      * Special number representing the base variable.

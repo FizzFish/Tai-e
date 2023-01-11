@@ -9,7 +9,7 @@ import java.util.Optional;
 
 public class TaintObj extends GenObj{
     private Obj parent;
-    private int kind = 0;
+    private Kind kind;
     private String trace;
 
     public TaintObj(TaintObj parent, Type type, Stmt allocSite) {
@@ -21,18 +21,18 @@ public class TaintObj extends GenObj{
     public TaintObj(JMethod method, Type type) {
         super(null, type);
         parent = null;
-        kind = 1;
+        kind = Kind.TAINT;
         trace = method.getSignature();
     }
 
     public boolean isTaint() {
-        return kind == 1;
+        return kind == Kind.TAINT;
     }
 
-    public void setKind(int kind) {
+    public void setKind(Kind kind) {
         this.kind = kind;
     }
-    public int getKind() {return kind;}
+    public Kind getKind() {return kind;}
 
     public String toString() {
         TaintObj cur = this;
