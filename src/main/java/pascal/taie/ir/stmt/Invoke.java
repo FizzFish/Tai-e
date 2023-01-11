@@ -66,6 +66,7 @@ public class Invoke extends DefinitionStmt<Var, InvokeExp>
     private boolean taintResolved = false;
     private boolean isCollectionStore = false;
     private boolean isCollectionLoad = false;
+    private boolean isConfigureLoad = false;
 
     public void setResolved() {
         resolved = true;
@@ -96,12 +97,17 @@ public class Invoke extends DefinitionStmt<Var, InvokeExp>
             String methodRef = getMethodRef().toString();
             if (methodRef.equals("<java.util.List: boolean add(java.lang.Object)>") || methodRef.equals("<java.util.Map: java.lang.Object put(java.lang.Object,java.lang.Object)>"))
                 isCollectionStore = true;
-            else if (methodRef.equals("<java.util.Map: java.lang.Object get(java.lang.Object)>") || methodRef.equals("<java.util.List: java.lang.Object get(int)>"))
+            else if (methodRef.equals("<java.util.List: java.lang.Object get(int)>"))
                 isCollectionLoad = true;
+            else if (methodRef.equals("<java.util.Map: java.lang.Object get(java.lang.Object)>")) {
+                isCollectionLoad = true;
+                isConfigureLoad = true;
+            }
         }
     }
     public boolean isCollectionStore() {return isCollectionStore;}
     public boolean isCollectionLoad() {return isCollectionLoad;}
+    public boolean isConfigureLoad() {return isConfigureLoad;}
 
     public Invoke(JMethod method, InvokeExp invokeExp) {
         this(method, invokeExp, null);

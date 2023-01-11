@@ -51,6 +51,7 @@ public class TaintObj extends Obj{
     public void setKind(int kind) {
         this.kind = kind;
     }
+    public int getKind() {return kind;}
 
     public String toString() {
         TaintObj cur = this;
