@@ -12,11 +12,10 @@ public class TaintObj extends GenObj{
     private int kind = 0;
     private String trace;
 
-    public TaintObj(Obj parent, Type type, Stmt allocSite) {
+    public TaintObj(TaintObj parent, Type type, Stmt allocSite) {
         super(allocSite, type);
         this.parent = parent;
-        if (parent.isTaint())
-            kind = 1;
+        kind = parent.kind;
         trace = allocSite.format();
     }
     public TaintObj(JMethod method, Type type) {
@@ -39,8 +38,7 @@ public class TaintObj extends GenObj{
         TaintObj cur = this;
         String out = "";
         do {
-            String stmt = cur.allocSite == null ? "begin" : cur.allocSite.format();
-            out += String.format("%s: %s\n", cur.type.toString(), stmt);
+            out += String.format("%s: %s\n", cur.type.toString(), cur.trace);
             cur = (TaintObj) cur.parent;
         } while (cur != null);
         return out;

@@ -54,7 +54,7 @@ public interface HeapModel extends Indexer<Obj> {
      * @return the mock object for given arguments.
      */
     Obj getMockObj(String desc, Object alloc, Type type, JMethod container);
-    TaintObj getTaintObj(Obj parent, Type type, Stmt allocation);
+    TaintObj getTaintObj(TaintObj parent, Type type, Stmt allocation);
     TaintObj getTaintObj(JMethod method, Type type);
     GenObj getGenObj(Stmt stmt, Type type);
 

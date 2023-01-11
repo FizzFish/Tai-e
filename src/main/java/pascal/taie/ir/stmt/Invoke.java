@@ -22,6 +22,7 @@
 
 package pascal.taie.ir.stmt;
 
+import pascal.taie.World;
 import pascal.taie.ir.exp.InvokeDynamic;
 import pascal.taie.ir.exp.InvokeExp;
 import pascal.taie.ir.exp.InvokeInstanceExp;
@@ -33,12 +34,19 @@ import pascal.taie.ir.exp.LValue;
 import pascal.taie.ir.exp.RValue;
 import pascal.taie.ir.exp.Var;
 import pascal.taie.ir.proginfo.MethodRef;
+import pascal.taie.language.classes.ClassHierarchy;
+import pascal.taie.language.classes.JClass;
 import pascal.taie.language.classes.JMethod;
+import pascal.taie.language.classes.Subsignature;
+import pascal.taie.language.type.ClassType;
+import pascal.taie.language.type.Type;
 import pascal.taie.util.collection.CollectionUtils;
 
 import javax.annotation.Nullable;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Representation of invocation statement, e.g., r = o.m(...) or o.m(...).
@@ -67,6 +75,7 @@ public class Invoke extends DefinitionStmt<Var, InvokeExp>
     private boolean isCollectionStore = false;
     private boolean isCollectionLoad = false;
     private boolean isConfigureLoad = false;
+    private int state = 0;
 
     public void setResolved() {
         resolved = true;
@@ -104,6 +113,12 @@ public class Invoke extends DefinitionStmt<Var, InvokeExp>
                 isConfigureLoad = true;
             }
         }
+    }
+    public Set<JMethod> resolve(Type type) {
+        Set<JMethod> methods = new HashSet();
+        if (!isDynamic())
+            methods = getMethodRef().getCacheMethods(type, this);
+        return methods;
     }
     public boolean isCollectionStore() {return isCollectionStore;}
     public boolean isCollectionLoad() {return isCollectionLoad;}

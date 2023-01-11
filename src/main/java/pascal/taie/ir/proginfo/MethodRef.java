@@ -25,18 +25,17 @@ package pascal.taie.ir.proginfo;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import pascal.taie.World;
-import pascal.taie.language.classes.JClass;
-import pascal.taie.language.classes.JMethod;
-import pascal.taie.language.classes.StringReps;
-import pascal.taie.language.classes.Subsignature;
+import pascal.taie.ir.stmt.Invoke;
+import pascal.taie.language.classes.*;
+import pascal.taie.language.type.ClassType;
 import pascal.taie.language.type.Type;
 import pascal.taie.util.InternalCanonicalized;
 import pascal.taie.util.collection.Maps;
 import pascal.taie.util.collection.Sets;
+import pascal.taie.util.collection.TwoKeyMap;
 
 import javax.annotation.Nullable;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentMap;
 
 import static pascal.taie.language.classes.ClassNames.METHOD_HANDLE;
@@ -52,6 +51,7 @@ public class MethodRef extends MemberRef {
 
     private static final ConcurrentMap<Key, MethodRef> map =
             Maps.newConcurrentMap(4096);
+    private final Map<Type, Set<JMethod>> dispatchTable = new HashMap<>();
 
     /**
      * Records the MethodRef that fails to be resolved.
@@ -182,6 +182,33 @@ public class MethodRef extends MemberRef {
             }
         }
         return method;
+    }
+
+    public Set<JMethod> getCacheMethods(Type type, Invoke callSite) {
+        Set<JMethod> target = dispatchTable.get(type);
+        if (target != null)
+            return target;
+        target = resolve(type, callSite);
+        dispatchTable.put(type, target);
+        return target;
+    }
+    private Set<JMethod> resolve(Type type, Invoke callSite) {
+        Set<JMethod> methods = new HashSet<>();
+        ClassHierarchy hierarchy = World.get().getClassHierarchy();
+        JClass jclass = ((ClassType) type).getJClass();
+        Set<JClass> subClasses = new HashSet<>();
+        subClasses.add(jclass);
+        if (callSite.isInterface())
+            hierarchy.getDirectImplementorsOf(jclass).forEach(subClasses::add);
+        else if (callSite.isVirtual())
+            hierarchy.getAllSubclassesOf(jclass).forEach(subClasses::add);
+
+        for (JClass subclass : subClasses) {
+            JMethod method = subclass.getDeclaredMethod(subsignature);
+            if (method != null && !method.isAbstract())
+                methods.add(method);
+        }
+        return methods;
     }
 
     @Override

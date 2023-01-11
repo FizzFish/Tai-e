@@ -333,9 +333,9 @@ public class DefaultSolver implements Solver {
                 pts.forEach(baseObj -> {
                     Obj obj = baseObj.getObject();
                     // y = taint.f; y<=taint
-                    if (obj instanceof TaintObj && isBasicField(field)) {
-                        TaintObj taint = taintManager.makeTaint(obj, field.getType(), load);
-                        addPointsTo(to, csManager.getCSObj(contextSelector.getEmptyContext(), taint));
+                    if (obj instanceof TaintObj taint && isBasicField(field)) {
+                        TaintObj newTaint = taintManager.makeTaint(taint, field.getType(), load);
+                        addPointsTo(to, csManager.getCSObj(contextSelector.getEmptyContext(), newTaint));
                     }
                     InstanceField instField = csManager.getInstanceField(
                             baseObj, field);
@@ -482,10 +482,10 @@ public class DefaultSolver implements Solver {
                         methods.add(CallGraphs.resolveCallee(type, callSite));
                     } else {
                         MethodRef methodRef = callSite.getMethodRef();
-                        // taintObj polymorphism for application method
+                        // GenObj/ConfigObj/TaintObj
                         if (methodRef.getDeclaringClass().isApplication()) {
                             if (!callSite.isTaintResolved()) {// one time enough
-                                methods = CallGraphs.resolve(var.getType(), callSite);
+                                methods = callSite.resolve(var.getType());
                                 if (methods.size() > 0)
                                     callSite.setTaintResolved();
                             }

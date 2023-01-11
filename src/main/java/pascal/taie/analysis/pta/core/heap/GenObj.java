@@ -75,4 +75,9 @@ public class GenObj extends Obj {
     public String toString() {
         return String.format("GenObj[%s]", type);
     }
+    public enum Kind {
+        GEN,
+        CONFIG,
+        TAINT
+    }
 }

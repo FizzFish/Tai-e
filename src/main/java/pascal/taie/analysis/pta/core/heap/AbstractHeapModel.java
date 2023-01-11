@@ -170,7 +170,7 @@ public abstract class AbstractHeapModel implements HeapModel {
         add(taintObj);
         return taintObj;
     }
-    public TaintObj getTaintObj(Obj parent, Type type, Stmt allocation) {
+    public TaintObj getTaintObj(TaintObj parent, Type type, Stmt allocation) {
         TaintObj taintObj = new TaintObj(parent, type, allocation);
         add(taintObj);
         return taintObj;
